@@ -1,0 +1,24 @@
+[package]
+name = "three-commas-scraper"
+version = "0.0.0"
+authors = ["Aleksander Heintz <alxandr@alxandr.me>"]
+edition = "2018"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+anyhow = "1"
+async-std = { version = "1", features = ["attributes"] }
+crossbeam = "0.8"
+futures = "0.3"
+hex = "0.4"
+indexmap = "1"
+itertools = "0.10"
+prometheus = "0.12"
+rust_decimal = "1"
+tide = "0.16"
+tracing = "0.1"
+tracing-subscriber = "0.2"
+
+three-commas-client = { path = "../client" }
+three-commas-types = { path = "../types" }

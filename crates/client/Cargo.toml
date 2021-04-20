@@ -1,0 +1,23 @@
+[package]
+name = "three-commas-client"
+version = "0.0.0"
+authors = ["Aleksander Heintz <alxandr@alxandr.me>"]
+edition = "2018"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+async-std = "1"
+async-trait = "0.1"
+hex = "0.4"
+hmac = "0.10"
+sha2 = "0.9"
+surf = { version = "2", default-features = false, features = ["hyper-client"] }
+thiserror = "1"
+tracing = "0.1"
+tracing-futures = "0.2"
+
+three-commas-types = { path = "../types" }
+
+[dev-dependencies]
+async-std = { version = "1", features = ["attributes"] }
