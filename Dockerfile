@@ -9,7 +9,7 @@ RUN --mount=type=cache,target=/src/obj --mount=type=cache,target=$CARGO_HOME \
 COPY . /src
 RUN --mount=type=cache,target=/src/obj --mount=type=cache,target=$CARGO_HOME \
   cargo build --package three-commas-scraper --release --locked --target-dir /src/obj \
-  && ls -R /src/obj/release/three-commas-scraper \
+  && ls -R /src/obj \
   && mv /src/obj/release/three-commas-scraper /src/three-commas-scraper
 # RUN --mount=type=cache,target=/src/target ls -la target && ls -la target/release && exit 1
 
