@@ -1,8 +1,15 @@
 FROM rustlang/rust:nightly as builder
 
-COPY . /src
+COPY Cargo.lock /src/Cargo.lock
 WORKDIR /src
-RUN --mount=type=cache,target=/src/target --mount=type=cache,target=$CARGO_HOME cargo build --package three-commas-scraper --release && mv target/release/three-commas-scraper /src/three-commas-scraper
+# Update index
+RUN --mount=type=cache,target=/src/obj --mount=type=cache,target=$CARGO_HOME \
+  cargo install lazy_static >/dev/null 2>/dev/null || true
+
+COPY . /src
+RUN --mount=type=cache,target=/src/obj --mount=type=cache,target=$CARGO_HOME \
+  cargo build --package three-commas-scraper --release --locked --target-dir /src/obj \
+  && mv /src/obj/release/three-commas-scraper /src/three-commas-scraper
 # RUN --mount=type=cache,target=/src/target ls -la target && ls -la target/release && exit 1
 
 FROM debian:buster-slim
