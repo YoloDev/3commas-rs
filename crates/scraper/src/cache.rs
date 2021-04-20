@@ -13,6 +13,8 @@ use std::{
 };
 use three_commas_client::{DealsScope, ThreeCommasClient};
 use three_commas_types::{Bot, BotStats, Deal, Pair};
+use tracing::{span, Level};
+use tracing_futures::Instrument;
 
 use crate::decimal_gauge::Decimal;
 
@@ -96,7 +98,8 @@ pub struct Cache {
 
 impl Cache {
   pub async fn new(client: &ThreeCommasClient) -> Result<Self> {
-    let data = fetch_data(client, IndexMap::new()).await?;
+    let span = span!(Level::INFO, "3commas::scraper::cache::init");
+    let data = fetch_data(client, IndexMap::new()).instrument(span).await?;
 
     Ok(Self {
       inner: Arc::new(Inner {
@@ -149,9 +152,12 @@ impl Cache {
   }
 
   async fn update(&self, expected_state: CacheState) {
-    println!("trigger update...");
+    let span = span!(Level::INFO, "3commas::scraper::cache::update");
     let previous = { self.inner.cached.lock().await.as_ref().clone() };
-    let data = fetch_data(&self.inner.client, previous.map).await.unwrap();
+    let data = fetch_data(&self.inner.client, previous.map)
+      .instrument(span)
+      .await
+      .unwrap();
 
     let new = CacheState::Stale(Instant::now());
     if self
@@ -170,7 +176,6 @@ async fn fetch_data(
   client: &ThreeCommasClient,
   previous: IndexMap<usize, Arc<BotData>>,
 ) -> Result<CachedData> {
-  println!("fetch data");
   let bots = client.bots().await.map_err(|e| e.into_inner())?;
   let active_deals = client
     .deals(DealsScope::Active)

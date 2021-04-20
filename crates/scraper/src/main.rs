@@ -1,5 +1,6 @@
 mod cache;
 mod decimal_gauge;
+mod server_tracing;
 
 use anyhow::Result;
 use cache::Cache;
@@ -111,6 +112,7 @@ async fn main() -> Result<()> {
     registry,
     gauges,
   });
+  app.with(server_tracing::TracingMiddlware);
   app.at("/metrics").get(get_metrics);
 
   app.listen("0.0.0.0:8080").await?;
