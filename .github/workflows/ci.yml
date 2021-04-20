@@ -45,7 +45,7 @@ jobs:
             linux/amd64
             linux/arm64
           tags: |
-            YoloDev/3commas-scraper:latest
-            YoloDev/3commas-scraper:v${{ steps.gitversion.outputs.fullSemVer }}
+            yolodev/3commas-scraper:latest
+            yolodev/3commas-scraper:v${{ steps.gitversion.outputs.fullSemVer }}
     outputs:
       version: ${{ steps.gitversion.outputs.fullSemVer }}
