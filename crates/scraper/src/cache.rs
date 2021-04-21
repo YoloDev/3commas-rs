@@ -97,6 +97,8 @@ pub struct Cache {
 }
 
 impl Cache {
+  const CACHE_DURATION: Duration = Duration::from_secs(60 * 2 /* 2 minutes */);
+
   pub async fn new(client: &ThreeCommasClient) -> Result<Self> {
     let span = span!(Level::INFO, "3commas::scraper::cache::init");
     let data = fetch_data(client, IndexMap::new()).instrument(span).await?;
@@ -135,7 +137,7 @@ impl Cache {
       match state {
         CacheState::Updating(_) => return,
         CacheState::Stale(v) => {
-          if v.elapsed() >= Duration::from_secs(60 * 10 /* 10 minutes */) {
+          if v.elapsed() >= Self::CACHE_DURATION {
             let new = CacheState::Updating(Instant::now());
             if self.inner.state.compare_exchange(state, new).is_ok() {
               let clone = self.clone();
