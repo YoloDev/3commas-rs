@@ -162,17 +162,17 @@ impl Cache {
 
   async fn update(&self, expected_state: CacheState) {
     let span = span!(Level::INFO, "3commas::scraper::cache::update");
-    event!(Level::INFO, "updating cache");
+    span.in_scope(|| event!(Level::INFO, "updating cache"));
     let previous = { self.inner.cached.lock().await.as_ref().clone() };
     let data = fetch_data(&self.inner.client, previous.map)
-      .instrument(span)
+      .instrument(span.clone())
       .await;
 
     let wait_time = if let Err(e) = &data {
-      event!(Level::WARN, error = ?e, "failed to update cache");
+      span.in_scope(|| event!(Level::WARN, error = ?e, "failed to update cache"));
       Self::ERROR_DURATION
     } else {
-      event!(Level::INFO, "updated cache data");
+      span.in_scope(|| event!(Level::INFO, "updated cache data"));
       Self::CACHE_DURATION
     };
 
