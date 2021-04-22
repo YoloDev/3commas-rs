@@ -13,7 +13,7 @@ use std::{
 };
 use three_commas_client::{DealsScope, ThreeCommasClient};
 use three_commas_types::{Bot, BotStats, Deal, Pair};
-use tracing::{span, Level};
+use tracing::{event, span, Level};
 use tracing_futures::Instrument;
 
 use crate::decimal_gauge::Decimal;
@@ -135,9 +135,15 @@ impl Cache {
     loop {
       let state = self.inner.state.load();
       match state {
-        CacheState::Updating(_) => return,
+        CacheState::Updating(v) => {
+          let elapsed = v.elapsed();
+          event!(Level::INFO, ?elapsed, "cache updating elapsed");
+          return;
+        }
         CacheState::Stale(v) => {
-          if v.elapsed() >= Self::CACHE_DURATION {
+          let elapsed = v.elapsed();
+          event!(Level::INFO, ?elapsed, "cache stale elapsed");
+          if elapsed >= Self::CACHE_DURATION {
             let new = CacheState::Updating(Instant::now());
             if self.inner.state.compare_exchange(state, new).is_ok() {
               let clone = self.clone();
@@ -155,11 +161,16 @@ impl Cache {
 
   async fn update(&self, expected_state: CacheState) {
     let span = span!(Level::INFO, "3commas::scraper::cache::update");
+    event!(Level::INFO, "updating cache");
     let previous = { self.inner.cached.lock().await.as_ref().clone() };
     let data = fetch_data(&self.inner.client, previous.map)
       .instrument(span)
-      .await
-      .unwrap();
+      .await;
+    if let Err(e) = &data {
+      event!(Level::WARN, error = ?e, "failed to update cache");
+    } else {
+      event!(Level::INFO, "updated cache data");
+    }
 
     let new = CacheState::Stale(Instant::now());
     if self
@@ -168,8 +179,10 @@ impl Cache {
       .compare_exchange(expected_state, new)
       .is_ok()
     {
-      let mut guard = self.inner.cached.lock().await;
-      *guard = Arc::new(data);
+      if let Ok(data) = data {
+        let mut guard = self.inner.cached.lock().await;
+        *guard = Arc::new(data);
+      }
     }
   }
 }
