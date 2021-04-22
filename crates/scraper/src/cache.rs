@@ -20,7 +20,7 @@ use crate::decimal_gauge::Decimal;
 
 #[derive(Clone, Copy, PartialEq, Eq)]
 pub enum CacheState {
-  Stale(Instant),
+  Stale(Instant, Duration),
   Updating(Instant),
 }
 
@@ -98,6 +98,7 @@ pub struct Cache {
 
 impl Cache {
   const CACHE_DURATION: Duration = Duration::from_secs(60 * 2 /* 2 minutes */);
+  const ERROR_DURATION: Duration = Duration::from_secs(60 * 15 /* 15 minutes */);
 
   pub async fn new(client: &ThreeCommasClient) -> Result<Self> {
     let span = span!(Level::INFO, "3commas::scraper::cache::init");
@@ -106,7 +107,7 @@ impl Cache {
     Ok(Self {
       inner: Arc::new(Inner {
         client: client.clone(),
-        state: AtomicCell::new(CacheState::Stale(Instant::now())),
+        state: AtomicCell::new(CacheState::Stale(Instant::now(), Self::CACHE_DURATION)),
         cached: Mutex::new(Arc::new(data)),
       }),
     })
@@ -140,10 +141,10 @@ impl Cache {
           event!(Level::INFO, ?elapsed, "cache updating elapsed");
           return;
         }
-        CacheState::Stale(v) => {
+        CacheState::Stale(v, wait_time) => {
           let elapsed = v.elapsed();
-          event!(Level::INFO, ?elapsed, "cache stale elapsed");
-          if elapsed >= Self::CACHE_DURATION {
+          event!(Level::INFO, ?elapsed, ?wait_time, "cache stale elapsed");
+          if elapsed >= wait_time {
             let new = CacheState::Updating(Instant::now());
             if self.inner.state.compare_exchange(state, new).is_ok() {
               let clone = self.clone();
@@ -166,13 +167,16 @@ impl Cache {
     let data = fetch_data(&self.inner.client, previous.map)
       .instrument(span)
       .await;
-    if let Err(e) = &data {
+
+    let wait_time = if let Err(e) = &data {
       event!(Level::WARN, error = ?e, "failed to update cache");
+      Self::ERROR_DURATION
     } else {
       event!(Level::INFO, "updated cache data");
-    }
+      Self::CACHE_DURATION
+    };
 
-    let new = CacheState::Stale(Instant::now());
+    let new = CacheState::Stale(Instant::now(), wait_time);
     if self
       .inner
       .state
