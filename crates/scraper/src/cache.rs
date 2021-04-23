@@ -99,6 +99,7 @@ pub struct Cache {
 impl Cache {
   const CACHE_DURATION: Duration = Duration::from_secs(60 * 2 /* 2 minutes */);
   const ERROR_DURATION: Duration = Duration::from_secs(60 * 15 /* 15 minutes */);
+  const UPDATE_TIMEOUT_DURATION: Duration = Duration::from_secs(60 * 15 /* 15 minutes */);
 
   pub async fn new(client: &ThreeCommasClient) -> Result<Self> {
     let span = span!(Level::INFO, "3commas::scraper::cache::init");
@@ -138,7 +139,17 @@ impl Cache {
       match state {
         CacheState::Updating(v) => {
           let elapsed = v.elapsed();
-          event!(Level::INFO, ?elapsed, "cache updating elapsed");
+          event!(Level::INFO, ?elapsed, "cache updating - time elapsed");
+          if elapsed > Self::UPDATE_TIMEOUT_DURATION * 2 {
+            event!(
+              Level::INFO,
+              "cache updating - resetting status due to long elapsed time"
+            );
+            self
+              .inner
+              .state
+              .store(CacheState::Stale(Instant::now(), Duration::ZERO));
+          }
           return;
         }
         CacheState::Stale(v, wait_time) => {
@@ -164,16 +175,26 @@ impl Cache {
     let span = span!(Level::INFO, "3commas::scraper::cache::update");
     span.in_scope(|| event!(Level::INFO, "updating cache"));
     let previous = { self.inner.cached.lock().await.as_ref().clone() };
-    let data = fetch_data(&self.inner.client, previous.map)
-      .instrument(span.clone())
-      .await;
+    let data = async_std::future::timeout(
+      Self::UPDATE_TIMEOUT_DURATION,
+      fetch_data(&self.inner.client, previous.map),
+    )
+    .instrument(span.clone())
+    .await;
 
-    let wait_time = if let Err(e) = &data {
-      span.in_scope(|| event!(Level::WARN, error = ?e, "failed to update cache"));
-      Self::ERROR_DURATION
-    } else {
-      span.in_scope(|| event!(Level::INFO, "updated cache data"));
-      Self::CACHE_DURATION
+    let wait_time = match &data {
+      Err(_) => {
+        span.in_scope(|| event!(Level::WARN, "update timed out"));
+        Self::CACHE_DURATION
+      }
+      Ok(Err(e)) => {
+        span.in_scope(|| event!(Level::WARN, error = ?e, "failed to update cache"));
+        Self::ERROR_DURATION
+      }
+      Ok(Ok(_)) => {
+        span.in_scope(|| event!(Level::INFO, "updated cache data"));
+        Self::CACHE_DURATION
+      }
     };
 
     let new = CacheState::Stale(Instant::now(), wait_time);
@@ -183,7 +204,7 @@ impl Cache {
       .compare_exchange(expected_state, new)
       .is_ok()
     {
-      if let Ok(data) = data {
+      if let Ok(Ok(data)) = data {
         let mut guard = self.inner.cached.lock().await;
         *guard = Arc::new(data);
       }
