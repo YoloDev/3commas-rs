@@ -4,20 +4,20 @@ mod server_tracing;
 
 use anyhow::Result;
 use cache::Cache;
-use clap::Clap;
+use clap::{ArgSettings, Clap};
 use decimal_gauge::DecimalGaugeVec;
 use prometheus::{
   core::{AtomicU64, GenericGaugeVec},
   Encoder, Opts, Registry, TextEncoder, TEXT_FORMAT,
 };
-use std::{env, sync::Arc};
+use std::sync::Arc;
 use three_commas_client::ThreeCommasClient;
 use tide::{Body, Request};
 use tracing_subscriber::EnvFilter;
 
 type U64GaugeVec = GenericGaugeVec<AtomicU64>;
 
-#[derive(Clap, Debug, PartialEq)]
+#[derive(Clap, Debug, PartialEq, Clone, Copy)]
 enum LogFormat {
   Pretty,
   Json,
@@ -25,8 +25,23 @@ enum LogFormat {
 
 #[derive(Clap, Debug)]
 struct App {
-  #[clap(arg_enum, env = "LOG_FORMAT", default_value = "pretty")]
+  /// Log output format
+  #[clap(
+    arg_enum,
+    long = "log-format",
+    short = 'f',
+    env = "LOG_FORMAT",
+    default_value = "pretty"
+  )]
   log_format: LogFormat,
+
+  /// 3commas API key
+  #[clap(env = "API_KEY", long = "api-key", short = 'k', setting = ArgSettings::HideEnvValues)]
+  api_key: String,
+
+  /// 3commas API secret
+  #[clap(env = "API_SECRET", long = "api-secret", short = 's', setting = ArgSettings::HideEnvValues)]
+  api_secret: String,
 }
 
 #[derive(Clone)]
@@ -67,19 +82,16 @@ async fn main() -> Result<()> {
     }
     LogFormat::Json => {
       tracing_subscriber::fmt()
-        .with_env_filter(EnvFilter::from_default_env())
         .json()
+        .with_env_filter(EnvFilter::from_default_env())
+        .with_current_span(false)
+        .with_max_level(tracing::Level::DEBUG)
         .init();
     }
   }
 
-  tracing_subscriber::fmt()
-    .with_env_filter(EnvFilter::from_default_env())
-    .with_max_level(tracing::Level::INFO)
-    .init();
-
-  let api_key = env::var("API_KEY").unwrap_or_else(|_| panic!("No API_KEY set"));
-  let api_secret = env::var("API_SECRET").unwrap_or_else(|_| panic!("No API_SECRET set"));
+  let api_key = app.api_key;
+  let api_secret = app.api_secret;
 
   let base_order = DecimalGaugeVec::new(
     bot_opts("base_order_volume", "Bot base order volume"),
