@@ -37,6 +37,10 @@ impl Bot {
     self.account_id
   }
 
+  pub fn is_enabled(&self) -> bool {
+    self.is_enabled
+  }
+
   pub fn pairs(&self) -> &[Pair] {
     &self.pairs
   }

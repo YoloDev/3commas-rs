@@ -1,11 +1,11 @@
 mod cache;
-mod decimal_gauge;
+mod gauges;
 mod server_tracing;
 
 use anyhow::Result;
 use cache::Cache;
 use clap::{ArgSettings, Clap};
-use decimal_gauge::DecimalGaugeVec;
+use gauges::{AtomicBool, DecimalGaugeVec};
 use prometheus::{
   core::{AtomicU64, GenericGaugeVec},
   Encoder, Opts, Registry, TextEncoder, TEXT_FORMAT,
@@ -16,6 +16,7 @@ use tide::{Body, Request};
 use tracing_subscriber::EnvFilter;
 
 type U64GaugeVec = GenericGaugeVec<AtomicU64>;
+type BoolGaugeVec = GenericGaugeVec<AtomicBool>;
 
 #[derive(Clap, Debug, PartialEq, Clone, Copy)]
 enum LogFormat {
@@ -54,6 +55,7 @@ struct Gauges {
   profit: DecimalGaugeVec,
   profits_in_usd: DecimalGaugeVec,
   open_deals: U64GaugeVec,
+  enabled: BoolGaugeVec,
 }
 
 #[derive(Clone)]
@@ -85,6 +87,7 @@ async fn main() -> Result<()> {
         .json()
         .with_env_filter(EnvFilter::from_default_env())
         .with_current_span(false)
+        .with_span_list(false)
         .with_max_level(tracing::Level::DEBUG)
         .init();
     }
@@ -125,6 +128,10 @@ async fn main() -> Result<()> {
     bot_opts("open_deals", "Bot open deals"),
     &["bot_id", "account_id"],
   )?;
+  let enabled = BoolGaugeVec::new(
+    bot_opts("enabled", "Bot enabled"),
+    &["bot_id", "account_id"],
+  )?;
 
   let registry = Registry::new();
   registry.register(Box::new(base_order.clone()))?;
@@ -135,6 +142,7 @@ async fn main() -> Result<()> {
   registry.register(Box::new(profit.clone()))?;
   registry.register(Box::new(profits_in_usd.clone()))?;
   registry.register(Box::new(open_deals.clone()))?;
+  registry.register(Box::new(enabled.clone()))?;
 
   let client = ThreeCommasClient::new(api_key, api_secret);
   let cache = Cache::new(&client).await?;
@@ -148,6 +156,7 @@ async fn main() -> Result<()> {
     profit,
     profits_in_usd,
     open_deals,
+    enabled,
   });
   let mut app = tide::with_state(AppState {
     cache,
@@ -169,6 +178,11 @@ async fn get_metrics(req: Request<AppState>) -> tide::Result<Body> {
     let bot_id = bot.id().to_string();
     let account_id = bot.account_id().to_string();
     let currency = bot.pairs().first().unwrap().quote();
+
+    gauges
+      .enabled
+      .with_label_values(&[&*bot_id, &*account_id])
+      .set(bot.is_enabled().into());
 
     gauges
       .base_order

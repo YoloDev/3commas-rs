@@ -1,3 +1,4 @@
+use crate::gauges::Decimal;
 use anyhow::Result;
 use async_std::{
   sync::Mutex,
@@ -15,8 +16,6 @@ use three_commas_client::{DealsScope, ThreeCommasClient};
 use three_commas_types::{Bot, BotStats, Deal, Pair};
 use tracing::{event, span, Level};
 use tracing_futures::Instrument;
-
-use crate::decimal_gauge::Decimal;
 
 #[derive(Clone, Copy, PartialEq, Eq)]
 pub enum CacheState {
@@ -37,6 +36,10 @@ impl BotData {
 
   pub fn account_id(&self) -> usize {
     self.bot.account_id()
+  }
+
+  pub fn is_enabled(&self) -> bool {
+    self.bot.is_enabled()
   }
 
   pub fn pairs(&self) -> &[Pair] {
