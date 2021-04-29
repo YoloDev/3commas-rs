@@ -10,7 +10,7 @@ edition = "2018"
 async-std = "1"
 async-trait = "0.1"
 hex = "0.4"
-hmac = "0.10"
+hmac = "0.11"
 sha2 = "0.9"
 surf = { version = "2", default-features = false, features = ["hyper-client"] }
 thiserror = "1"
