@@ -5,7 +5,7 @@ mod server_tracing;
 use anyhow::Result;
 use cache::Cache;
 use clap::{ArgSettings, Clap};
-use gauges::{AtomicBool, DecimalGaugeVec};
+use gauges::{BoolGaugeVec, DecimalGaugeVec};
 use prometheus::{
   core::{AtomicU64, GenericGaugeVec},
   Encoder, Opts, Registry, TextEncoder, TEXT_FORMAT,
@@ -16,7 +16,6 @@ use tide::{Body, Request};
 use tracing_subscriber::EnvFilter;
 
 type U64GaugeVec = GenericGaugeVec<AtomicU64>;
-type BoolGaugeVec = GenericGaugeVec<AtomicBool>;
 
 #[derive(Clap, Debug, PartialEq, Clone, Copy)]
 enum LogFormat {
