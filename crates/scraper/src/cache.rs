@@ -225,9 +225,9 @@ async fn fetch_data(
     .await
     .map_err(|e| e.into_inner())?;
 
-  let mut deals = HashMap::new();
-  for (id, group) in &active_deals.into_iter().group_by(|d| d.bot_id()) {
-    deals.insert(id, group.collect::<Vec<_>>());
+  let mut deals: HashMap<usize, Vec<Deal>> = HashMap::new();
+  for deal in active_deals {
+    deals.entry(deal.bot_id()).or_default().push(deal);
   }
 
   let mut result = previous;
@@ -239,6 +239,12 @@ async fn fetch_data(
     let stats = client.bot_stats(&bot).await.map_err(|e| e.into_inner())?;
     let open_deals = deals.remove(&bot.id()).unwrap_or_default();
 
+    event!(
+      Level::DEBUG,
+      bot = bot.id(),
+      open_deals = open_deals.len(),
+      "open deals on bot"
+    );
     let data = BotData {
       bot,
       stats,
@@ -247,5 +253,10 @@ async fn fetch_data(
     result.insert(data.bot.id(), Arc::new(data));
   }
 
+  event!(
+    Level::DEBUG,
+    count = deals.len(),
+    "deals not connected to a known bot"
+  );
   Ok(CachedData { map: result })
 }

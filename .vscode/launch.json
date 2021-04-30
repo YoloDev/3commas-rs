@@ -1,0 +1,83 @@
+{
+    // Use IntelliSense to learn about possible attributes.
+    // Hover to view descriptions of existing attributes.
+    // For more information, visit: https://go.microsoft.com/fwlink/?linkid=830387
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug unit tests in library 'three-commas-client'",
+            "cargo": {
+                "args": [
+                    "test",
+                    "--no-run",
+                    "--lib",
+                    "--package=three-commas-client"
+                ],
+                "filter": {
+                    "name": "three-commas-client",
+                    "kind": "lib"
+                }
+            },
+            "args": [],
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug unit tests in library 'three-commas-types'",
+            "cargo": {
+                "args": [
+                    "test",
+                    "--no-run",
+                    "--lib",
+                    "--package=three-commas-types"
+                ],
+                "filter": {
+                    "name": "three-commas-types",
+                    "kind": "lib"
+                }
+            },
+            "args": [],
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug executable 'three-commas-scraper'",
+            "cargo": {
+                "args": [
+                    "build",
+                    "--bin=three-commas-scraper",
+                    "--package=three-commas-scraper"
+                ],
+                "filter": {
+                    "name": "three-commas-scraper",
+                    "kind": "bin"
+                }
+            },
+            "args": [],
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug unit tests in executable 'three-commas-scraper'",
+            "cargo": {
+                "args": [
+                    "test",
+                    "--no-run",
+                    "--bin=three-commas-scraper",
+                    "--package=three-commas-scraper"
+                ],
+                "filter": {
+                    "name": "three-commas-scraper",
+                    "kind": "bin"
+                }
+            },
+            "args": [],
+            "cwd": "${workspaceFolder}"
+        }
+    ]
+}
