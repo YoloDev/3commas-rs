@@ -73,7 +73,7 @@ impl Middleware for SigningMiddleware {
 
 async fn get_signature(key: &[u8], req: &mut Request) -> surf::Result<String> {
   // TODO: Handle error?
-  let mut mac = HmacSha256::new_varkey(key).unwrap();
+  let mut mac = HmacSha256::new_from_slice(key).unwrap();
   let url = req.url();
   let rel_url = &url[Position::BeforePath..];
   mac.update(rel_url.as_bytes());
