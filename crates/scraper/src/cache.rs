@@ -1,4 +1,3 @@
-use crate::gauges::Decimal;
 use anyhow::Result;
 use async_std::{
   sync::Mutex,
@@ -6,7 +5,7 @@ use async_std::{
 };
 use crossbeam::atomic::AtomicCell;
 use indexmap::IndexMap;
-use itertools::Itertools;
+use rust_decimal::Decimal;
 use std::{
   collections::HashMap,
   sync::Arc,
@@ -46,12 +45,16 @@ impl BotData {
     self.bot.pairs()
   }
 
+  pub fn currency(&self) -> &str {
+    self.pairs().first().unwrap().quote()
+  }
+
   pub fn base_order_volume(&self) -> Decimal {
-    self.bot.base_order_volume().into()
+    self.bot.base_order_volume()
   }
 
   pub fn safety_order_volume(&self) -> Decimal {
-    self.bot.safety_order_volume().into()
+    self.bot.safety_order_volume()
   }
 
   pub fn max_safety_orders(&self) -> usize {
@@ -59,7 +62,7 @@ impl BotData {
   }
 
   pub fn total_budget(&self) -> Decimal {
-    self.bot.max_budget().into()
+    self.bot.max_budget()
   }
 
   pub fn max_active_deals(&self) -> usize {
@@ -67,15 +70,11 @@ impl BotData {
   }
 
   pub fn profits(&self) -> impl Iterator<Item = (&str, Decimal)> {
-    self
-      .stats
-      .overall()
-      .iter()
-      .map(|(tok, value)| (tok, value.into()))
+    self.stats.overall().iter()
   }
 
   pub fn profits_in_usd(&self) -> Decimal {
-    self.stats.overall_usd_profit().into()
+    self.stats.overall_usd_profit()
   }
 
   pub fn open_deals(&self) -> usize {
@@ -105,7 +104,7 @@ impl Cache {
   const UPDATE_TIMEOUT_DURATION: Duration = Duration::from_secs(60 * 15 /* 15 minutes */);
 
   pub async fn new(client: &ThreeCommasClient) -> Result<Self> {
-    let span = span!(Level::INFO, "3commas::scraper::cache::init");
+    let span = span!(target: "3commas::cache", Level::INFO, "3commas::scraper::cache::init");
     let data = fetch_data(client, IndexMap::new()).instrument(span).await?;
 
     Ok(Self {
@@ -142,9 +141,10 @@ impl Cache {
       match state {
         CacheState::Updating(v) => {
           let elapsed = v.elapsed();
-          event!(Level::INFO, ?elapsed, "cache updating - time elapsed");
+          event!(target: "3commas::cache", Level::INFO, ?elapsed, "cache updating - time elapsed");
           if elapsed > Self::UPDATE_TIMEOUT_DURATION * 2 {
             event!(
+              target: "3commas::cache",
               Level::INFO,
               "cache updating - resetting status due to long elapsed time"
             );
@@ -157,7 +157,7 @@ impl Cache {
         }
         CacheState::Stale(v, wait_time) => {
           let elapsed = v.elapsed();
-          event!(Level::INFO, ?elapsed, ?wait_time, "cache stale elapsed");
+          event!(target: "3commas::cache", Level::INFO, ?elapsed, ?wait_time, "cache stale elapsed");
           if elapsed >= wait_time {
             let new = CacheState::Updating(Instant::now());
             if self.inner.state.compare_exchange(state, new).is_ok() {
@@ -175,8 +175,8 @@ impl Cache {
   }
 
   async fn update(&self, expected_state: CacheState) {
-    let span = span!(Level::INFO, "3commas::scraper::cache::update");
-    span.in_scope(|| event!(Level::INFO, "updating cache"));
+    let span = span!(target: "3commas::cache", Level::INFO, "3commas::scraper::cache::update");
+    span.in_scope(|| event!(target: "3commas::cache", Level::INFO, "updating cache"));
     let previous = { self.inner.cached.lock().await.as_ref().clone() };
     let data = async_std::future::timeout(
       Self::UPDATE_TIMEOUT_DURATION,
@@ -187,15 +187,17 @@ impl Cache {
 
     let wait_time = match &data {
       Err(_) => {
-        span.in_scope(|| event!(Level::WARN, "update timed out"));
+        span.in_scope(|| event!(target: "3commas::cache", Level::WARN, "update timed out"));
         Self::CACHE_DURATION
       }
       Ok(Err(e)) => {
-        span.in_scope(|| event!(Level::WARN, error = ?e, "failed to update cache"));
+        span.in_scope(
+          || event!(target: "3commas::cache", Level::WARN, error = ?e, "failed to update cache"),
+        );
         Self::ERROR_DURATION
       }
       Ok(Ok(_)) => {
-        span.in_scope(|| event!(Level::INFO, "updated cache data"));
+        span.in_scope(|| event!(target: "3commas::cache", Level::INFO, "updated cache data"));
         Self::CACHE_DURATION
       }
     };
@@ -225,6 +227,7 @@ async fn fetch_data(
     .await
     .map_err(|e| e.into_inner())?;
 
+  event!(target: "3commas::cache", Level::DEBUG, deals = active_deals.len(), "got open deals");
   let mut deals: HashMap<usize, Vec<Deal>> = HashMap::new();
   for deal in active_deals {
     deals.entry(deal.bot_id()).or_default().push(deal);
@@ -238,6 +241,13 @@ async fn fetch_data(
   for bot in bots {
     let stats = client.bot_stats(&bot).await.map_err(|e| e.into_inner())?;
     let open_deals = deals.remove(&bot.id()).unwrap_or_default();
+    event!(
+      target: "3commas::cache",
+      Level::DEBUG,
+      deals = open_deals.len(),
+      bot = bot.id(),
+      "bot open deals"
+    );
 
     event!(
       Level::DEBUG,
@@ -254,6 +264,7 @@ async fn fetch_data(
   }
 
   event!(
+    target: "3commas::cache",
     Level::DEBUG,
     count = deals.len(),
     "deals not connected to a known bot"

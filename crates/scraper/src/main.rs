@@ -1,21 +1,18 @@
 mod cache;
 mod gauges;
+mod metric;
 mod server_tracing;
 
 use anyhow::Result;
 use cache::Cache;
 use clap::{ArgSettings, Clap};
-use gauges::{BoolGaugeVec, DecimalGaugeVec};
-use prometheus::{
-  core::{AtomicU64, GenericGaugeVec},
-  Encoder, Opts, Registry, TextEncoder, TEXT_FORMAT,
-};
+use metric::BotGauge;
+use prometheus::{Encoder, Registry, TextEncoder, TEXT_FORMAT};
+use rust_decimal::Decimal;
 use std::sync::Arc;
 use three_commas_client::ThreeCommasClient;
 use tide::{Body, Request};
 use tracing_subscriber::EnvFilter;
-
-type U64GaugeVec = GenericGaugeVec<AtomicU64>;
 
 #[derive(Clap, Debug, PartialEq, Clone, Copy)]
 enum LogFormat {
@@ -42,19 +39,23 @@ struct App {
   /// 3commas API secret
   #[clap(env = "API_SECRET", long = "api-secret", short = 's', setting = ArgSettings::HideEnvValues)]
   api_secret: String,
+
+  /// Port number
+  #[clap(env = "PORT", long = "port", short = 'p', default_value = "8080")]
+  port: usize,
 }
 
 #[derive(Clone)]
 struct Gauges {
-  base_order: DecimalGaugeVec,
-  safety_order: DecimalGaugeVec,
-  max_safety_orders: U64GaugeVec,
-  max_deals: U64GaugeVec,
-  total_budget: DecimalGaugeVec,
-  profit: DecimalGaugeVec,
-  profits_in_usd: DecimalGaugeVec,
-  open_deals: U64GaugeVec,
-  enabled: BoolGaugeVec,
+  base_order: BotGauge<Decimal, 0>,
+  safety_order: BotGauge<Decimal, 0>,
+  max_safety_orders: BotGauge<usize, 0>,
+  max_deals: BotGauge<usize, 0>,
+  total_budget: BotGauge<Decimal, 0>,
+  profit: BotGauge<Decimal, 0>,
+  profits_in_usd: BotGauge<Decimal, 0>,
+  open_deals: BotGauge<usize, 0>,
+  enabled: BotGauge<bool, 0>,
 }
 
 #[derive(Clone)]
@@ -64,84 +65,52 @@ struct AppState {
   gauges: Arc<Gauges>,
 }
 
-fn bot_opts(name: &str, help: &str) -> Opts {
-  Opts::new(name, help)
-    .namespace("three_commas")
-    .subsystem("bots")
-}
-
 #[async_std::main]
 async fn main() -> Result<()> {
   let app = App::parse();
 
+  let filter = EnvFilter::from_default_env()
+    // Set the base level when not matched by other directives to INFO.
+    .add_directive(tracing::Level::INFO.into());
+
   match app.log_format {
     LogFormat::Pretty => {
-      tracing_subscriber::fmt()
-        .with_env_filter(EnvFilter::from_default_env())
-        .with_max_level(tracing::Level::INFO)
-        .init();
+      tracing_subscriber::fmt().with_env_filter(filter).init();
     }
     LogFormat::Json => {
       tracing_subscriber::fmt()
         .json()
-        .with_env_filter(EnvFilter::from_default_env())
+        .with_env_filter(filter)
         .with_current_span(false)
         .with_span_list(false)
-        .with_max_level(tracing::Level::DEBUG)
         .init();
     }
   }
 
   let api_key = app.api_key;
   let api_secret = app.api_secret;
+  let port = app.port;
 
-  let base_order = DecimalGaugeVec::new(
-    bot_opts("base_order_volume", "Bot base order volume"),
-    &["bot_id", "account_id", "currency"],
-  )?;
-  let safety_order = DecimalGaugeVec::new(
-    bot_opts("safety_order_volume", "Bot initial safety order volume"),
-    &["bot_id", "account_id", "currency"],
-  )?;
-  let max_safety_orders = U64GaugeVec::new(
-    bot_opts("max_safety_orders", "Bot max safety orders"),
-    &["bot_id", "account_id"],
-  )?;
-  let max_deals = U64GaugeVec::new(
-    bot_opts("max_active_deals", "Bot max concurrent deals"),
-    &["bot_id", "account_id"],
-  )?;
-  let total_budget = DecimalGaugeVec::new(
-    bot_opts("total_budget", "Bot total budget"),
-    &["bot_id", "account_id", "currency"],
-  )?;
-  let profit = DecimalGaugeVec::new(
-    bot_opts("profit", "Bot profit"),
-    &["bot_id", "account_id", "currency"],
-  )?;
-  let profits_in_usd = DecimalGaugeVec::new(
-    bot_opts("profits_in_usd", "Bot profit converted to USD"),
-    &["bot_id", "account_id"],
-  )?;
-  let open_deals = U64GaugeVec::new(
-    bot_opts("open_deals", "Bot open deals"),
-    &["bot_id", "account_id"],
-  )?;
-  let enabled = BoolGaugeVec::new(
-    bot_opts("enabled", "Bot enabled"),
-    &["bot_id", "account_id"],
-  )?;
+  let base_order = BotGauge::new("base_order_volume", "Bot base order volume")?;
+  let safety_order = BotGauge::new("safety_order_volume", "Bot initial safety order volume")?;
+  let max_safety_orders = BotGauge::new("max_safety_orders", "Bot max safety orders")?;
+  let max_deals = BotGauge::new("max_active_deals", "Bot max concurrent deals")?;
+  let total_budget = BotGauge::new("total_budget", "Bot total budget")?;
+  let profit = BotGauge::new("profit", "Bot profit")?;
+  let profits_in_usd = BotGauge::new("profits_in_usd", "Bot profit converted to USD")?;
+  let open_deals = BotGauge::new("open_deals", "Bot open deals")?;
+  let enabled = BotGauge::new("enabled", "Bot enabled")?;
 
   let registry = Registry::new();
-  registry.register(Box::new(base_order.clone()))?;
-  registry.register(Box::new(safety_order.clone()))?;
-  registry.register(Box::new(max_safety_orders.clone()))?;
-  registry.register(Box::new(max_deals.clone()))?;
-  registry.register(Box::new(total_budget.clone()))?;
-  registry.register(Box::new(profit.clone()))?;
-  registry.register(Box::new(profits_in_usd.clone()))?;
-  registry.register(Box::new(open_deals.clone()))?;
-  registry.register(Box::new(enabled.clone()))?;
+  base_order.register(&registry)?;
+  safety_order.register(&registry)?;
+  max_safety_orders.register(&registry)?;
+  max_deals.register(&registry)?;
+  total_budget.register(&registry)?;
+  profit.register(&registry)?;
+  profits_in_usd.register(&registry)?;
+  open_deals.register(&registry)?;
+  enabled.register(&registry)?;
 
   let client = ThreeCommasClient::new(api_key, api_secret);
   let cache = Cache::new(&client).await?;
@@ -165,7 +134,7 @@ async fn main() -> Result<()> {
   app.with(server_tracing::TracingMiddlware);
   app.at("/metrics").get(get_metrics);
 
-  app.listen("0.0.0.0:8080").await?;
+  app.listen(format!("0.0.0.0:{}", port)).await?;
   Ok(())
 }
 
@@ -174,56 +143,18 @@ async fn get_metrics(req: Request<AppState>) -> tide::Result<Body> {
   let gauges = &*state.gauges;
 
   for bot in state.cache.iter() {
-    let bot_id = bot.id().to_string();
-    let account_id = bot.account_id().to_string();
-    let currency = bot.pairs().first().unwrap().quote();
+    gauges.enabled.set(&bot, bot.is_enabled());
+    gauges.base_order.set(&bot, bot.base_order_volume());
+    gauges.safety_order.set(&bot, bot.safety_order_volume());
+    gauges.max_safety_orders.set(&bot, bot.max_safety_orders());
+    gauges.max_deals.set(&bot, bot.max_active_deals());
+    gauges.total_budget.set(&bot, bot.total_budget());
+    gauges.profits_in_usd.set(&bot, bot.profits_in_usd());
+    gauges.open_deals.set(&bot, bot.open_deals());
 
-    gauges
-      .enabled
-      .with_label_values(&[&*bot_id, &*account_id])
-      .set(bot.is_enabled().into());
-
-    gauges
-      .base_order
-      .with_label_values(&[&*bot_id, &*account_id, &*currency])
-      .set(bot.base_order_volume());
-
-    gauges
-      .safety_order
-      .with_label_values(&[&*bot_id, &*account_id, &*currency])
-      .set(bot.safety_order_volume());
-
-    gauges
-      .max_safety_orders
-      .with_label_values(&[&*bot_id, &*account_id])
-      .set(bot.max_safety_orders() as u64);
-
-    gauges
-      .max_deals
-      .with_label_values(&[&*bot_id, &*account_id])
-      .set(bot.max_active_deals() as u64);
-
-    gauges
-      .total_budget
-      .with_label_values(&[&*bot_id, &*account_id, &*currency])
-      .set(bot.total_budget());
-
-    for (tok, value) in bot.profits() {
-      gauges
-        .profit
-        .with_label_values(&[&*bot_id, &*account_id, tok])
-        .set(value);
+    if let Some((_, profits)) = bot.profits().find(|(tok, _)| *tok == bot.currency()) {
+      gauges.profit.set(&bot, profits);
     }
-
-    gauges
-      .profits_in_usd
-      .with_label_values(&[&*bot_id, &*account_id])
-      .set(bot.profits_in_usd());
-
-    gauges
-      .open_deals
-      .with_label_values(&[&*bot_id, &*account_id])
-      .set(bot.open_deals() as u64);
   }
 
   let mut buffer = Vec::new();

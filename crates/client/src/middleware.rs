@@ -99,11 +99,13 @@ impl Middleware for TracingPipelineLoggerMiddlware {
     client: surf::Client,
     next: surf::middleware::Next<'_>,
   ) -> surf::Result<surf::Response> {
+    let uri = format!("{}", req.url());
+    let method = format!("{}", req.method());
     let span = span!(
+      target: "3commas::request",
       Level::INFO,
       "3commas::request",
-      method = ?req.method(),
-      uri = ?req.url(),
+      %method, %uri,
     );
 
     next.run(req, client).instrument(span).await
@@ -125,17 +127,17 @@ impl Middleware for TracingRequestLoggerMiddlware {
     let uri = format!("{}", req.url());
     let method = format!("{}", req.method());
     let id = COUNTER.fetch_add(1, Ordering::Relaxed);
-    event!(Level::INFO, %method, %uri, id, "sending request");
+    event!(target: "3commas::request", Level::INFO, %method, %uri, id, "sending request");
 
     let res = next.run(req, client).await?;
     let status = res.status();
     let elapsed = start_time.elapsed();
     if status.is_server_error() {
-      event!(Level::ERROR, %method, %uri, id, %status, ?elapsed, "request completed");
+      event!(target: "3commas::request", Level::ERROR, %method, %uri, id, %status, ?elapsed, "request completed");
     } else if status.is_client_error() {
-      event!(Level::WARN, %method, %uri, id, %status, ?elapsed, "request completed");
+      event!(target: "3commas::request", Level::WARN, %method, %uri, id, %status, ?elapsed, "request completed");
     } else {
-      event!(Level::INFO, %method, %uri, id, %status, ?elapsed, "request completed");
+      event!(target: "3commas::request", Level::INFO, %method, %uri, id, %status, ?elapsed, "request completed");
     };
 
     Ok(res)

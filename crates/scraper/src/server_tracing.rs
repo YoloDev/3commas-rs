@@ -18,16 +18,16 @@ impl TracingMiddlware {
     method: String,
     id: usize,
   ) -> tide::Result {
-    event!(Level::INFO, %method, %uri, id, "request received");
+    event!(target: "3commas::scraper::server", Level::INFO, %method, %uri, id, "request received");
     let response = next.run(req).await;
     let status = response.status();
     let elapsed = start_time.elapsed();
     if status.is_server_error() {
-      event!(Level::ERROR, %method, %uri, id, %status, ?elapsed, "response sent");
+      event!(target: "3commas::scraper::server",Level::ERROR, %method, %uri, id, %status, ?elapsed, "response sent");
     } else if status.is_client_error() {
-      event!(Level::WARN, %method, %uri, id, %status, ?elapsed, "response sent");
+      event!(target: "3commas::scraper::server",Level::WARN, %method, %uri, id, %status, ?elapsed, "response sent");
     } else {
-      event!(Level::INFO, %method, %uri, id, %status, ?elapsed, "response sent");
+      event!(target: "3commas::scraper::server",Level::INFO, %method, %uri, id, %status, ?elapsed, "response sent");
     };
 
     Ok(response)
@@ -43,6 +43,7 @@ impl<State: Clone + Send + Sync + 'static> Middleware<State> for TracingMiddlwar
     let id = COUNTER.fetch_add(1, Ordering::Relaxed);
 
     let span = span!(
+      target: "3commas::server::request",
       Level::INFO,
       "server::request",
       %uri,

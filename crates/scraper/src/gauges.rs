@@ -1,5 +1,5 @@
 use crossbeam::atomic::AtomicCell;
-use prometheus::core::{Atomic, GenericGaugeVec, Number};
+use prometheus::core::{Atomic, Number};
 use rust_decimal::prelude::ToPrimitive;
 use std::{
   ops::{self},
@@ -86,8 +86,6 @@ impl Atomic for AtomicDecimal {
   }
 }
 
-pub type DecimalGaugeVec = GenericGaugeVec<AtomicDecimal>;
-
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
 #[repr(transparent)]
 pub struct Boolean(bool);
@@ -108,6 +106,7 @@ impl From<Boolean> for bool {
 
 impl ops::AddAssign for Boolean {
   #[inline]
+  #[allow(clippy::suspicious_op_assign_impl)]
   fn add_assign(&mut self, rhs: Self) {
     self.0 = self.0 || rhs.0
   }
@@ -115,6 +114,7 @@ impl ops::AddAssign for Boolean {
 
 impl ops::SubAssign for Boolean {
   #[inline]
+  #[allow(clippy::suspicious_op_assign_impl)]
   fn sub_assign(&mut self, rhs: Self) {
     self.0 = self.0 && rhs.0
   }
@@ -161,7 +161,7 @@ impl Atomic for AtomicBool {
       let new = current && delta.0;
       if self
         .0
-        .compare_exchange(current, new, Ordering::SeqCst, Ordering::Release)
+        .compare_exchange(current, new, Ordering::SeqCst, Ordering::Relaxed)
         .is_ok()
       {
         break;
@@ -175,7 +175,7 @@ impl Atomic for AtomicBool {
       let new = current || delta.0;
       if self
         .0
-        .compare_exchange(current, new, Ordering::SeqCst, Ordering::Release)
+        .compare_exchange(current, new, Ordering::SeqCst, Ordering::Relaxed)
         .is_ok()
       {
         break;
@@ -183,5 +183,3 @@ impl Atomic for AtomicBool {
     }
   }
 }
-
-pub type BoolGaugeVec = GenericGaugeVec<AtomicBool>;
