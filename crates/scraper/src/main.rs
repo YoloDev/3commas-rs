@@ -52,6 +52,7 @@ struct Gauges {
   max_safety_orders: BotGauge<usize, 0>,
   max_deals: BotGauge<usize, 0>,
   total_budget: BotGauge<Decimal, 0>,
+  current_budget: BotGauge<Decimal, 0>,
   profit: BotGauge<Decimal, 0>,
   profits_in_usd: BotGauge<Decimal, 0>,
   open_deals: BotGauge<usize, 0>,
@@ -96,6 +97,7 @@ async fn main() -> Result<()> {
   let max_safety_orders = BotGauge::new("max_safety_orders", "Bot max safety orders")?;
   let max_deals = BotGauge::new("max_active_deals", "Bot max concurrent deals")?;
   let total_budget = BotGauge::new("total_budget", "Bot total budget")?;
+  let current_budget = BotGauge::new("current_budget", "Bot current budget")?;
   let profit = BotGauge::new("profit", "Bot profit")?;
   let profits_in_usd = BotGauge::new("profits_in_usd", "Bot profit converted to USD")?;
   let open_deals = BotGauge::new("open_deals", "Bot open deals")?;
@@ -107,6 +109,7 @@ async fn main() -> Result<()> {
   max_safety_orders.register(&registry)?;
   max_deals.register(&registry)?;
   total_budget.register(&registry)?;
+  current_budget.register(&registry)?;
   profit.register(&registry)?;
   profits_in_usd.register(&registry)?;
   open_deals.register(&registry)?;
@@ -121,6 +124,7 @@ async fn main() -> Result<()> {
     max_safety_orders,
     max_deals,
     total_budget,
+    current_budget,
     profit,
     profits_in_usd,
     open_deals,
@@ -151,6 +155,15 @@ async fn get_metrics(req: Request<AppState>) -> tide::Result<Body> {
     gauges.total_budget.set(&bot, bot.total_budget());
     gauges.profits_in_usd.set(&bot, bot.profits_in_usd());
     gauges.open_deals.set(&bot, bot.open_deals());
+
+    gauges.current_budget.set(
+      &bot,
+      if bot.is_enabled() {
+        bot.total_budget()
+      } else {
+        0.into()
+      },
+    );
 
     if let Some((_, profits)) = bot.profits().find(|(tok, _)| *tok == bot.currency()) {
       gauges.profit.set(&bot, profits);
