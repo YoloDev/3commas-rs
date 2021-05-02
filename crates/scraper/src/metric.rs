@@ -61,7 +61,29 @@ impl Metric for bool {
   }
 }
 
-const DEFAULT_LABELS: &[&str] = &["bot_id", "account_id", "currency"];
+const BOT_LABEL_NAMES: &[&str] = &["bot_id", "account_id", "currency"];
+pub struct BotLabels<'a> {
+  bot_id: String,
+  account_id: String,
+  currency: &'a str,
+}
+
+impl<'a> BotLabels<'a> {
+  pub fn new(bot: &'a BotData) -> Self {
+    let bot_id = bot.id().to_string();
+    let account_id = bot.account_id().to_string();
+
+    Self {
+      bot_id,
+      account_id,
+      currency: bot.currency(),
+    }
+  }
+
+  pub fn as_label_values(&self) -> [&str; BOT_LABEL_NAMES.len()] {
+    [&*self.bot_id, &*self.account_id, self.currency]
+  }
+}
 
 #[derive(Clone)]
 pub struct BotGauge<T: Metric, const EXTRA_LABELS: usize>(
@@ -73,8 +95,8 @@ impl<T: Metric> BotGauge<T, 0> {
     Self::new_with_labels(name, help, &[])
   }
 
-  pub fn set(&self, bot: &BotData, value: T) {
-    self.set_with_labels(bot, value, &[]);
+  pub fn set(&self, bot_labels: &BotLabels, value: T) {
+    self.set_with_labels(bot_labels, value, &[]);
   }
 }
 
@@ -88,8 +110,8 @@ impl<T: Metric, const EXTRA_LABELS: usize> BotGauge<T, EXTRA_LABELS> {
       .namespace("three_commas")
       .subsystem("bots");
 
-    let mut labels = Vec::with_capacity(DEFAULT_LABELS.len() + EXTRA_LABELS);
-    labels.extend(DEFAULT_LABELS);
+    let mut labels = Vec::with_capacity(BOT_LABEL_NAMES.len() + EXTRA_LABELS);
+    labels.extend(BOT_LABEL_NAMES);
     labels.extend(extra_label_names);
     let gauge = GenericGaugeVec::new(opts, &labels)?;
 
@@ -102,20 +124,26 @@ impl<T: Metric, const EXTRA_LABELS: usize> BotGauge<T, EXTRA_LABELS> {
     Ok(())
   }
 
-  pub fn set_with_labels(&self, bot: &BotData, value: T, label_values: &[&str; EXTRA_LABELS]) {
-    let mut all_label_vals = Vec::with_capacity(DEFAULT_LABELS.len() + EXTRA_LABELS);
-    let bot_id = bot.id().to_string();
-    let account_id = bot.account_id().to_string();
-    all_label_vals.extend(std::array::IntoIter::new([
-      &*bot_id,
-      &*account_id,
-      bot.currency(),
-    ]));
-    all_label_vals.extend(label_values);
+  pub fn set_with_labels(
+    &self,
+    bot_labels: &BotLabels,
+    value: T,
+    extra_labels: &[&str; EXTRA_LABELS],
+  ) {
+    if EXTRA_LABELS == 0 {
+      self
+        .0
+        .with_label_values(&bot_labels.as_label_values())
+        .set(T::to_metric_value(value));
+    } else {
+      let mut all_label_vals = Vec::with_capacity(BOT_LABEL_NAMES.len() + EXTRA_LABELS);
+      all_label_vals.extend(std::array::IntoIter::new(bot_labels.as_label_values()));
+      all_label_vals.extend(extra_labels);
 
-    self
-      .0
-      .with_label_values(&all_label_vals)
-      .set(T::to_metric_value(value));
+      self
+        .0
+        .with_label_values(&all_label_vals)
+        .set(T::to_metric_value(value));
+    }
   }
 }

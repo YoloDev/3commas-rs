@@ -3,6 +3,7 @@ use async_std::{
   sync::Mutex,
   task::{self, block_on},
 };
+use chrono::{DateTime, Utc};
 use crossbeam::atomic::AtomicCell;
 use indexmap::IndexMap;
 use rust_decimal::Decimal;
@@ -31,6 +32,10 @@ pub struct BotData {
 impl BotData {
   pub fn id(&self) -> usize {
     self.bot.id()
+  }
+
+  pub fn name(&self) -> &str {
+    self.bot.name()
   }
 
   pub fn account_id(&self) -> usize {
@@ -85,6 +90,17 @@ impl BotData {
 #[derive(Clone)]
 pub struct CachedData {
   map: IndexMap<usize, Arc<BotData>>,
+  date: DateTime<Utc>,
+}
+
+impl CachedData {
+  pub fn iter(&self) -> impl Iterator<Item = &Arc<BotData>> {
+    self.map.values()
+  }
+
+  pub fn date(&self) -> DateTime<Utc> {
+    self.date
+  }
 }
 
 struct Inner {
@@ -116,23 +132,14 @@ impl Cache {
     })
   }
 
-  pub fn iter(&self) -> impl Iterator<Item = Arc<BotData>> {
+  pub fn data(&self) -> Arc<CachedData> {
     self.maybe_start_update();
 
-    let cached = {
-      if let Some(guard) = self.inner.cached.try_lock() {
-        guard.clone()
-      } else {
-        block_on(async { self.inner.cached.lock().await.clone() })
-      }
-    };
-
-    cached
-      .map
-      .iter()
-      .map(|(_, b)| b.clone())
-      .collect::<Vec<_>>()
-      .into_iter()
+    if let Some(guard) = self.inner.cached.try_lock() {
+      guard.clone()
+    } else {
+      block_on(async { self.inner.cached.lock().await.clone() })
+    }
   }
 
   fn maybe_start_update(&self) {
@@ -269,5 +276,8 @@ async fn fetch_data(
     count = deals.len(),
     "deals not connected to a known bot"
   );
-  Ok(CachedData { map: result })
+  Ok(CachedData {
+    map: result,
+    date: Utc::now(),
+  })
 }

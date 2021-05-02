@@ -2,14 +2,18 @@ mod cache;
 mod gauges;
 mod metric;
 mod server_tracing;
+mod telegraf;
 
 use anyhow::Result;
-use cache::Cache;
+use cache::{Cache, CachedData};
 use clap::{ArgSettings, Clap};
-use metric::BotGauge;
+use metric::{BotGauge, BotLabels};
 use prometheus::{Encoder, Registry, TextEncoder, TEXT_FORMAT};
 use rust_decimal::Decimal;
-use std::sync::Arc;
+use std::{
+  fmt::{self, Write},
+  sync::Arc,
+};
 use three_commas_client::ThreeCommasClient;
 use tide::{Body, Request};
 use tracing_subscriber::EnvFilter;
@@ -137,6 +141,7 @@ async fn main() -> Result<()> {
   });
   app.with(server_tracing::TracingMiddlware);
   app.at("/metrics").get(get_metrics);
+  app.at("/telegraf").get(get_telegraf_metrics);
 
   app.listen(format!("0.0.0.0:{}", port)).await?;
   Ok(())
@@ -146,18 +151,22 @@ async fn get_metrics(req: Request<AppState>) -> tide::Result<Body> {
   let state = req.state();
   let gauges = &*state.gauges;
 
-  for bot in state.cache.iter() {
-    gauges.enabled.set(&bot, bot.is_enabled());
-    gauges.base_order.set(&bot, bot.base_order_volume());
-    gauges.safety_order.set(&bot, bot.safety_order_volume());
-    gauges.max_safety_orders.set(&bot, bot.max_safety_orders());
-    gauges.max_deals.set(&bot, bot.max_active_deals());
-    gauges.total_budget.set(&bot, bot.total_budget());
-    gauges.profits_in_usd.set(&bot, bot.profits_in_usd());
-    gauges.open_deals.set(&bot, bot.open_deals());
+  let data = state.cache.data();
+  for bot in data.iter() {
+    let labels = BotLabels::new(&bot);
+    gauges.enabled.set(&labels, bot.is_enabled());
+    gauges.base_order.set(&labels, bot.base_order_volume());
+    gauges.safety_order.set(&labels, bot.safety_order_volume());
+    gauges
+      .max_safety_orders
+      .set(&labels, bot.max_safety_orders());
+    gauges.max_deals.set(&labels, bot.max_active_deals());
+    gauges.total_budget.set(&labels, bot.total_budget());
+    gauges.profits_in_usd.set(&labels, bot.profits_in_usd());
+    gauges.open_deals.set(&labels, bot.open_deals());
 
     gauges.current_budget.set(
-      &bot,
+      &labels,
       if bot.is_enabled() {
         bot.total_budget()
       } else {
@@ -166,7 +175,7 @@ async fn get_metrics(req: Request<AppState>) -> tide::Result<Body> {
     );
 
     if let Some((_, profits)) = bot.profits().find(|(tok, _)| *tok == bot.currency()) {
-      gauges.profit.set(&bot, profits);
+      gauges.profit.set(&labels, profits);
     }
   }
 
@@ -181,5 +190,28 @@ async fn get_metrics(req: Request<AppState>) -> tide::Result<Body> {
 
   let mut body = Body::from_bytes(buffer);
   body.set_mime(TEXT_FORMAT);
+  Ok(body)
+}
+
+struct TelegrafWriter<'a>(&'a CachedData);
+
+impl<'a> fmt::Display for TelegrafWriter<'a> {
+  fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+    for bot in self.0.iter() {
+      telegraf::write_metrics_for_bot(&bot, self.0.date(), f)?;
+    }
+
+    Ok(())
+  }
+}
+
+async fn get_telegraf_metrics(req: Request<AppState>) -> tide::Result<Body> {
+  let data = req.state().cache.data();
+
+  let mut buffer: String = String::new();
+  write!(&mut buffer, "{}", TelegrafWriter(&*data))?;
+
+  let mut body = Body::from_string(buffer);
+  body.set_mime("plain/text");
   Ok(body)
 }
