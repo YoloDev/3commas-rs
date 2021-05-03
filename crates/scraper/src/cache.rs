@@ -115,7 +115,7 @@ pub struct Cache {
 }
 
 impl Cache {
-  const CACHE_DURATION: Duration = Duration::from_secs(60 * 2 /* 2 minutes */);
+  const CACHE_DURATION: Duration = Duration::from_secs(30 /* 30 seconds */);
   const ERROR_DURATION: Duration = Duration::from_secs(60 * 15 /* 15 minutes */);
   const UPDATE_TIMEOUT_DURATION: Duration = Duration::from_secs(60 * 15 /* 15 minutes */);
 
