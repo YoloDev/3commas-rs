@@ -15,7 +15,7 @@ use std::{
   sync::Arc,
 };
 use three_commas_client::ThreeCommasClient;
-use tide::{Body, Request};
+use tide::{Body, Request, Response};
 use tracing_subscriber::EnvFilter;
 
 #[derive(Clap, Debug, PartialEq, Clone, Copy)]
@@ -140,11 +140,16 @@ async fn main() -> Result<()> {
     gauges,
   });
   app.with(server_tracing::TracingMiddlware);
+  app.at("/health").get(get_health);
   app.at("/metrics").get(get_metrics);
   app.at("/telegraf").get(get_telegraf_metrics);
 
   app.listen(format!("0.0.0.0:{}", port)).await?;
   Ok(())
+}
+
+async fn get_health(_: Request<AppState>) -> tide::Result {
+  Ok(Response::new(200))
 }
 
 async fn get_metrics(req: Request<AppState>) -> tide::Result<Body> {
