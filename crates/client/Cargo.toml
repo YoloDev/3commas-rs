@@ -9,9 +9,12 @@ edition = "2018"
 [dependencies]
 async-std = "1"
 async-trait = "0.1"
+form_urlencoded = "1"
+futures = "0.3"
 hex = "0.4"
 hmac = "0.11"
 sha2 = "0.9"
+smol_str = { version = "0.1" }
 surf = { version = "2", default-features = false, features = ["hyper-client"] }
 thiserror = "1"
 tracing = "0.1"

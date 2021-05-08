@@ -7,7 +7,7 @@ use std::{
   slice::Iter,
 };
 
-use crate::cache::BotData;
+use crate::cache::{BotData, Cached};
 
 pub trait MetricValue {
   fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result;
@@ -98,24 +98,21 @@ impl<'a, const L: usize> FieldSet<'a> for Fields<'a, L> {
 }
 
 const BOT_TAG_NAMES: &[&str; 4] = &["botId", "accountId", "quoteCurrency", "botName"];
-
-// const BOT_METRIC_NAMES: &[&str; 8] = &[
-//   "base_order_volume",
-//   "safety_order_volume",
-//   "max_safety_orders",
-//   "max_active_deals",
-//   "total_budget",
-//   "profits_in_usd",
-//   "open_deals",
-//   "enabled",
-// ];
-
 const BOT_TAG_NAMES_WITH_CURRENCY: &[&str; 5] = &[
   "botId",
   "accountId",
   "quoteCurrency",
   "botName",
   "baseCurrency",
+];
+const DEAL_TAG_NAMES: &[&str; 7] = &[
+  "botId",
+  "accountId",
+  "quoteCurrency",
+  "botName",
+  "baseCurrency",
+  "dealId",
+  "strategy",
 ];
 
 // const BOT_METRIC_NAMES_WITH_CURRENCY: &[&str; 1] = &["profit"];
@@ -192,11 +189,8 @@ fn write_metric<'a, T: TagSet<'a>>(
   Ok(())
 }
 
-pub fn write_metrics_for_bot(
-  bot: &BotData,
-  date: DateTime<Utc>,
-  f: &mut fmt::Formatter<'_>,
-) -> fmt::Result {
+pub fn write_metrics_for_bot(bot: &Cached<BotData>, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+  let cache_time = bot.cache_time();
   let bot_id = bot.id().to_string();
   let account_id = bot.account_id().to_string();
   let quote_currency = bot.currency();
@@ -218,7 +212,7 @@ pub fn write_metrics_for_bot(
     &tags,
     "baseOrderVolume",
     &base_order_volume,
-    date,
+    cache_time,
     f,
   )?;
   write_metric(
@@ -226,7 +220,7 @@ pub fn write_metrics_for_bot(
     &tags,
     "safetyOrderVolume",
     &safety_order_volume,
-    date,
+    cache_time,
     f,
   )?;
   write_metric(
@@ -234,7 +228,7 @@ pub fn write_metrics_for_bot(
     &tags,
     "maxSafetyOrders",
     &max_safety_orders,
-    date,
+    cache_time,
     f,
   )?;
   write_metric(
@@ -242,20 +236,27 @@ pub fn write_metrics_for_bot(
     &tags,
     "max_active_deals",
     &max_active_deals,
-    date,
+    cache_time,
     f,
   )?;
-  write_metric("totalBudget", &tags, "totalBudget", &total_budget, date, f)?;
+  write_metric(
+    "totalBudget",
+    &tags,
+    "totalBudget",
+    &total_budget,
+    cache_time,
+    f,
+  )?;
   write_metric(
     "profitsInUsd",
     &tags,
     "profitsInUsd",
     &profits_in_usd,
-    date,
+    cache_time,
     f,
   )?;
-  write_metric("openDeals", &tags, "openDeals", &open_deals, date, f)?;
-  write_metric("enabled", &tags, "enabled", &is_enabled, date, f)?;
+  write_metric("openDeals", &tags, "openDeals", &open_deals, cache_time, f)?;
+  write_metric("enabled", &tags, "enabled", &is_enabled, cache_time, f)?;
 
   for (base_currency, profits) in bot.profits() {
     let tags = [
@@ -267,7 +268,62 @@ pub fn write_metrics_for_bot(
     ];
     let tags = Tags::new(BOT_TAG_NAMES_WITH_CURRENCY, &tags);
 
-    write_metric("profit", &tags, "profit", &profits, date, f)?;
+    write_metric("profit", &tags, "profit", &profits, cache_time, f)?;
+  }
+
+  for deal in bot.deals() {
+    let cache_time = deal.cache_time();
+    let deal_id = deal.id().to_string();
+    let base_currency = deal.pair().base();
+    let strategy = deal.strategy().to_string();
+    let tags = [
+      &*bot_id,
+      &*account_id,
+      quote_currency,
+      &*bot_name,
+      base_currency,
+      &*deal_id,
+      &*strategy,
+    ];
+    let tags = Tags::new(DEAL_TAG_NAMES, &tags);
+
+    let finished = deal.is_finished();
+    let max_safety_orders = deal.max_safety_orders();
+    let completed_safety_orders_count = deal.completed_safety_orders_count();
+    let completed_manual_safety_orders_count = deal.completed_manual_safety_orders_count();
+    let bought_volume = match deal.bought_volume() {
+      None => continue,
+      Some(v) => v,
+    };
+    let reserved_base_coin = deal.reserved_base_coin();
+    let actual_profit = deal.actual_profit();
+    let actual_usd_profit = deal.actual_usd_profit();
+    let values: [&dyn MetricValue; 8] = [
+      &finished,
+      &max_safety_orders,
+      &completed_safety_orders_count,
+      &completed_manual_safety_orders_count,
+      &bought_volume,
+      &reserved_base_coin,
+      &actual_profit,
+      &actual_usd_profit,
+    ];
+    let fields = Fields::new(
+      &[
+        "finished",
+        "maxSafetyOrders",
+        "completedSafetyOrdersCount",
+        "completedManualSafetyOrdersCount",
+        "boughtVolume",
+        "reservedBaseCoin",
+        "actualProfit",
+        "actualUsdProfit",
+      ],
+      &values,
+    );
+
+    write_measurement("deal", &tags, &fields, Some(cache_time), f)?;
+    f.write_char('\n')?;
   }
 
   Ok(())

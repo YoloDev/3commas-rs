@@ -1,16 +1,21 @@
+mod cached;
+
+pub use cached::Cached;
+
 use anyhow::Result;
 use async_std::{
   sync::Mutex,
   task::{self, block_on},
 };
-use chrono::{DateTime, Utc};
+use chrono::{Duration, Utc};
 use crossbeam::atomic::AtomicCell;
-use indexmap::IndexMap;
+use futures::{future, TryStreamExt};
+use im::OrdMap;
 use rust_decimal::Decimal;
 use std::{
-  collections::HashMap,
+  collections::{HashMap, HashSet},
   sync::Arc,
-  time::{Duration, Instant},
+  time::Instant,
 };
 use three_commas_client::{DealsScope, ThreeCommasClient};
 use three_commas_types::{Bot, BotStats, Deal, Pair};
@@ -24,9 +29,10 @@ pub enum CacheState {
 }
 
 pub struct BotData {
-  bot: Bot,
-  stats: BotStats,
-  open_deals: Vec<Deal>,
+  bot: Cached<Bot>,
+  stats: Cached<BotStats>,
+  deals: OrdMap<usize, Cached<Deal>>,
+  open_deals: usize,
 }
 
 impl BotData {
@@ -78,35 +84,34 @@ impl BotData {
     self.stats.overall().iter()
   }
 
+  pub fn deals(&self) -> impl Iterator<Item = &Cached<Deal>> {
+    self.deals.values()
+  }
+
   pub fn profits_in_usd(&self) -> Decimal {
     self.stats.overall_usd_profit()
   }
 
   pub fn open_deals(&self) -> usize {
-    self.open_deals.len()
+    self.open_deals
   }
 }
 
-#[derive(Clone)]
-pub struct CachedData {
-  map: IndexMap<usize, Arc<BotData>>,
-  date: DateTime<Utc>,
+#[derive(Default)]
+pub struct Data {
+  bots: OrdMap<usize, Cached<BotData>>,
 }
 
-impl CachedData {
-  pub fn iter(&self) -> impl Iterator<Item = &Arc<BotData>> {
-    self.map.values()
-  }
-
-  pub fn date(&self) -> DateTime<Utc> {
-    self.date
+impl Data {
+  pub fn iter(&self) -> impl Iterator<Item = &Cached<BotData>> {
+    self.bots.values()
   }
 }
 
 struct Inner {
   client: ThreeCommasClient,
   state: AtomicCell<CacheState>,
-  cached: Mutex<Arc<CachedData>>,
+  cached: Mutex<Cached<Data>>,
 }
 
 #[derive(Clone)]
@@ -115,24 +120,32 @@ pub struct Cache {
 }
 
 impl Cache {
-  const CACHE_DURATION: Duration = Duration::from_secs(30 /* 30 seconds */);
-  const ERROR_DURATION: Duration = Duration::from_secs(60 * 15 /* 15 minutes */);
-  const UPDATE_TIMEOUT_DURATION: Duration = Duration::from_secs(60 * 15 /* 15 minutes */);
+  fn cache_duration() -> Duration {
+    Duration::seconds(30 /* 30 seconds */)
+  }
+  fn error_duration() -> Duration {
+    Duration::minutes(15 /* 15 minutes */)
+  }
+  fn update_timeout_duration() -> Duration {
+    Duration::minutes(15 /* 15 minutes */)
+  }
 
   pub async fn new(client: &ThreeCommasClient) -> Result<Self> {
     let span = span!(target: "3commas::cache", Level::INFO, "3commas::scraper::cache::init");
-    let data = fetch_data(client, IndexMap::new()).instrument(span).await?;
+    let data = fetch_data(client, Cached::new(Default::default()))
+      .instrument(span)
+      .await?;
 
     Ok(Self {
       inner: Arc::new(Inner {
         client: client.clone(),
-        state: AtomicCell::new(CacheState::Stale(Instant::now(), Self::CACHE_DURATION)),
-        cached: Mutex::new(Arc::new(data)),
+        state: AtomicCell::new(CacheState::Stale(Instant::now(), Self::cache_duration())),
+        cached: Mutex::new(data),
       }),
     })
   }
 
-  pub fn data(&self) -> Arc<CachedData> {
+  pub fn data(&self) -> Cached<Data> {
     self.maybe_start_update();
 
     if let Some(guard) = self.inner.cached.try_lock() {
@@ -147,9 +160,9 @@ impl Cache {
       let state = self.inner.state.load();
       match state {
         CacheState::Updating(v) => {
-          let elapsed = v.elapsed();
-          event!(target: "3commas::cache", Level::INFO, ?elapsed, "cache updating - time elapsed");
-          if elapsed > Self::UPDATE_TIMEOUT_DURATION * 2 {
+          let elapsed = Duration::from_std(v.elapsed()).unwrap();
+          event!(target: "3commas::cache", Level::INFO, elapsed = ?elapsed.to_std().unwrap(), "cache updating - time elapsed");
+          if elapsed > Self::update_timeout_duration() * 2 {
             event!(
               target: "3commas::cache",
               Level::INFO,
@@ -158,13 +171,13 @@ impl Cache {
             self
               .inner
               .state
-              .store(CacheState::Stale(Instant::now(), Duration::ZERO));
+              .store(CacheState::Stale(Instant::now(), Duration::zero()));
           }
           return;
         }
         CacheState::Stale(v, wait_time) => {
-          let elapsed = v.elapsed();
-          event!(target: "3commas::cache", Level::INFO, ?elapsed, ?wait_time, "cache stale elapsed");
+          let elapsed = Duration::from_std(v.elapsed()).unwrap();
+          event!(target: "3commas::cache", Level::INFO, elapsed = ?elapsed.to_std().unwrap(), wait_time = ?wait_time.to_std().unwrap(), "cache stale elapsed");
           if elapsed >= wait_time {
             let new = CacheState::Updating(Instant::now());
             if self.inner.state.compare_exchange(state, new).is_ok() {
@@ -184,10 +197,10 @@ impl Cache {
   async fn update(&self, expected_state: CacheState) {
     let span = span!(target: "3commas::cache", Level::INFO, "3commas::scraper::cache::update");
     span.in_scope(|| event!(target: "3commas::cache", Level::INFO, "updating cache"));
-    let previous = { self.inner.cached.lock().await.as_ref().clone() };
+    let previous = { self.inner.cached.lock().await.clone() };
     let data = async_std::future::timeout(
-      Self::UPDATE_TIMEOUT_DURATION,
-      fetch_data(&self.inner.client, previous.map),
+      Self::update_timeout_duration().to_std().unwrap(),
+      fetch_data(&self.inner.client, previous),
     )
     .instrument(span.clone())
     .await;
@@ -195,17 +208,17 @@ impl Cache {
     let wait_time = match &data {
       Err(_) => {
         span.in_scope(|| event!(target: "3commas::cache", Level::WARN, "update timed out"));
-        Self::CACHE_DURATION
+        Self::cache_duration()
       }
       Ok(Err(e)) => {
         span.in_scope(
           || event!(target: "3commas::cache", Level::WARN, error = ?e, "failed to update cache"),
         );
-        Self::ERROR_DURATION
+        Self::error_duration()
       }
       Ok(Ok(_)) => {
         span.in_scope(|| event!(target: "3commas::cache", Level::INFO, "updated cache data"));
-        Self::CACHE_DURATION
+        Self::cache_duration()
       }
     };
 
@@ -218,56 +231,90 @@ impl Cache {
     {
       if let Ok(Ok(data)) = data {
         let mut guard = self.inner.cached.lock().await;
-        *guard = Arc::new(data);
+        *guard = data;
       }
     }
   }
 }
 
-async fn fetch_data(
-  client: &ThreeCommasClient,
-  previous: IndexMap<usize, Arc<BotData>>,
-) -> Result<CachedData> {
-  let bots = client.bots().await.map_err(|e| e.into_inner())?;
-  let active_deals = client
-    .deals(DealsScope::Active)
+async fn fetch_deals(client: &ThreeCommasClient) -> Result<Vec<Cached<Deal>>> {
+  // first - get all deals started within the last year
+  let one_year_ago = Utc::now() - Duration::days(365);
+  let mut all_deals: Vec<Cached<Deal>> = client
+    .deals()
+    .limit(1000)
+    .map_ok(Cached::new)
+    .try_take_while(|d| future::ready(Ok(d.created_at() > one_year_ago)))
+    .try_collect()
     .await
     .map_err(|e| e.into_inner())?;
 
-  event!(target: "3commas::cache", Level::DEBUG, deals = active_deals.len(), "got open deals");
-  let mut deals: HashMap<usize, Vec<Deal>> = HashMap::new();
-  for deal in active_deals {
+  let seen_deals = all_deals.iter().map(|d| d.id()).collect::<HashSet<usize>>();
+
+  let active_deals: Vec<Cached<Deal>> = client
+    .deals()
+    .scope(Some(DealsScope::Active))
+    .limit(100)
+    .map_ok(Cached::new)
+    .try_collect()
+    .await
+    .map_err(|e| e.into_inner())?;
+
+  let unseen_active_deals = active_deals
+    .into_iter()
+    .filter(|d| !seen_deals.contains(&d.id()));
+  all_deals.extend(unseen_active_deals);
+
+  Ok(all_deals)
+}
+
+async fn fetch_data(client: &ThreeCommasClient, previous: Cached<Data>) -> Result<Cached<Data>> {
+  let bots = {
+    let bots = client.bots().await.map_err(|e| e.into_inner())?;
+    let now = Utc::now();
+    bots
+      .into_iter()
+      .map(|b| Cached::new_at(b, now))
+      .collect::<Vec<_>>()
+  };
+  let all_deals = fetch_deals(client).await?;
+
+  event!(target: "3commas::cache", Level::DEBUG, deals = all_deals.len(), "fetched a total of {} deals", all_deals.len());
+  let mut deals: HashMap<usize, Vec<Cached<Deal>>> = HashMap::with_capacity(bots.len());
+  for deal in all_deals {
     deals.entry(deal.bot_id()).or_default().push(deal);
   }
 
-  let mut result = previous;
-  if result.len() < bots.len() {
-    result.reserve(bots.len() - result.len());
-  }
-
+  let mut bot_builder = previous.bots.clone();
   for bot in bots {
-    let stats = client.bot_stats(&bot).await.map_err(|e| e.into_inner())?;
-    let open_deals = deals.remove(&bot.id()).unwrap_or_default();
+    let stats = {
+      let stats = client.bot_stats(&bot).await.map_err(|e| e.into_inner())?;
+      Cached::new(stats)
+    };
+    let bot_deals = deals.remove(&bot.id()).unwrap_or_default();
+    let open_deals = bot_deals.iter().filter(|d| d.is_active()).count();
     event!(
       target: "3commas::cache",
       Level::DEBUG,
-      deals = open_deals.len(),
+      deals = bot_deals.len(),
+      open_deals = open_deals,
       bot = bot.id(),
-      "bot open deals"
+      "bot deals"
     );
 
-    event!(
-      Level::DEBUG,
-      bot = bot.id(),
-      open_deals = open_deals.len(),
-      "open deals on bot"
-    );
+    let mut deals = bot_builder
+      .get(&bot.id())
+      .map(|b| b.deals.clone())
+      .unwrap_or_default();
+    deals.extend(bot_deals.into_iter().map(|d| (d.id(), d)));
+
     let data = BotData {
       bot,
       stats,
+      deals,
       open_deals,
     };
-    result.insert(data.bot.id(), Arc::new(data));
+    bot_builder.insert(data.bot.id(), Cached::new(data));
   }
 
   event!(
@@ -276,8 +323,5 @@ async fn fetch_data(
     count = deals.len(),
     "deals not connected to a known bot"
   );
-  Ok(CachedData {
-    map: result,
-    date: Utc::now(),
-  })
+  Ok(Cached::new(Data { bots: bot_builder }))
 }

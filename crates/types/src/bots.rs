@@ -5,7 +5,7 @@ use crate::Pair;
 use rust_decimal::Decimal;
 use serde::Deserialize;
 
-pub use deals::{Deal, DealStatus, TakeProfitType};
+pub use deals::{Deal, DealStatus};
 pub use stats::{BotStats, TokenValues};
 
 #[derive(Debug, Deserialize, Clone)]

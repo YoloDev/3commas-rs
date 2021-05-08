@@ -1,12 +1,8 @@
-use crate::Pair;
+use crate::{Pair, ProfitCurrency, StopLossType, Strategy, TakeProfitType, VolumeType};
 use chrono::{DateTime, Utc};
 use rust_decimal::Decimal;
-use serde::{
-  de::{Error, Expected, Unexpected},
-  Deserialize, Serialize,
-};
+use serde::{Deserialize, Serialize};
 use smol_str::SmolStr;
-use std::borrow::Cow;
 
 #[derive(Debug, Deserialize, Clone)]
 pub struct Deal {
@@ -19,6 +15,8 @@ pub struct Deal {
   created_at: DateTime<Utc>,
   updated_at: Option<DateTime<Utc>>,
   closed_at: Option<DateTime<Utc>>,
+  #[serde(rename = "finished?")]
+  is_finished: bool,
   current_active_safety_orders_count: usize,
   /// completed safeties (not including manual)
   completed_safety_orders_count: usize,
@@ -30,17 +28,42 @@ pub struct Deal {
   base_order_volume: Decimal,
   safety_order_volume: Decimal,
   safety_order_step_percentage: Decimal,
-  bought_amount: Decimal,
-  bought_volume: Decimal,
-  bought_average_price: Decimal,
-  sold_amount: Decimal,
-  sold_volume: Decimal,
-  sold_average_price: Decimal,
+  bought_amount: Option<Decimal>,
+  bought_volume: Option<Decimal>,
+  bought_average_price: Option<Decimal>,
+  sold_amount: Option<Decimal>,
+  sold_volume: Option<Decimal>,
+  sold_average_price: Option<Decimal>,
   take_profit_type: TakeProfitType,
   final_profit: Decimal,
   martingale_coefficient: Decimal,
   martingale_volume_coefficient: Decimal,
   martingale_step_coefficient: Decimal,
+  profit_currency: ProfitCurrency,
+  stop_loss_type: StopLossType,
+  safety_order_volume_type: VolumeType,
+  base_order_volume_type: VolumeType,
+  from_currency: SmolStr,
+  to_currency: SmolStr,
+  current_price: Decimal,
+  take_profit_price: Option<Decimal>,
+  stop_loss_price: Option<Decimal>,
+  final_profit_percentage: Decimal,
+  actual_profit_percentage: Decimal,
+  bot_name: String,
+  account_name: String,
+  usd_final_profit: Decimal,
+  actual_profit: Decimal,
+  actual_usd_profit: Decimal,
+  failed_message: Option<String>,
+  reserved_base_coin: Decimal,
+  reserved_second_coin: Decimal,
+  trailing_deviation: Decimal,
+  /// Highest price met in case of long deal, lowest price otherwise
+  trailing_max_price: Option<Decimal>,
+  /// Highest price met in TSL in case of long deal, lowest price otherwise
+  tsl_max_price: Option<Decimal>,
+  strategy: Strategy,
 }
 
 impl Deal {
@@ -55,142 +78,123 @@ impl Deal {
   pub fn bot_id(&self) -> usize {
     self.bot_id
   }
-}
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum TakeProfitType {
-  Base,
-  Total,
-}
-
-impl Serialize for TakeProfitType {
-  fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
-  where
-    S: serde::Serializer,
-  {
-    let str = match self {
-      Self::Base => "base",
-      Self::Total => "total",
-    };
-
-    str.serialize(serializer)
+  pub fn created_at(&self) -> DateTime<Utc> {
+    self.created_at
   }
-}
 
-struct TakeProfitExpected;
-impl Expected for TakeProfitExpected {
-  fn fmt(&self, formatter: &mut std::fmt::Formatter) -> std::fmt::Result {
-    formatter.write_str("\"base\" or \"total\"")
+  pub fn status(&self) -> DealStatus {
+    self.status
   }
-}
 
-impl<'de> Deserialize<'de> for TakeProfitType {
-  fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
-  where
-    D: serde::Deserializer<'de>,
-  {
-    let status_str = <Cow<str> as Deserialize>::deserialize(deserializer)?;
-    match &*status_str {
-      "base" => Ok(Self::Base),
-      "total" => Ok(Self::Total),
-      v => Err(<D::Error as Error>::invalid_value(
-        Unexpected::Str(v),
-        &TakeProfitExpected,
-      )),
-    }
+  pub fn is_finished(&self) -> bool {
+    self.is_finished
+  }
+
+  pub fn is_active(&self) -> bool {
+    !self.is_finished
+  }
+
+  pub fn pair(&self) -> &Pair {
+    &self.pair
+  }
+
+  pub fn strategy(&self) -> Strategy {
+    self.strategy
+  }
+
+  pub fn max_safety_orders(&self) -> usize {
+    self.max_safety_orders
+  }
+
+  pub fn completed_safety_orders_count(&self) -> usize {
+    self.completed_safety_orders_count
+  }
+
+  pub fn completed_manual_safety_orders_count(&self) -> usize {
+    self.completed_manual_safety_orders_count
+  }
+
+  pub fn bought_volume(&self) -> Option<Decimal> {
+    self.bought_volume
+  }
+
+  pub fn reserved_base_coin(&self) -> Decimal {
+    self.reserved_base_coin
+  }
+
+  pub fn actual_profit(&self) -> Decimal {
+    self.actual_profit
+  }
+
+  pub fn actual_usd_profit(&self) -> Decimal {
+    self.actual_usd_profit
   }
 }
 
 #[non_exhaustive]
-#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub enum DealStatus {
+  #[serde(rename = "created")]
   Created,
+
+  #[serde(rename = "base_order_placed")]
   BaseOrderPlaced,
+
+  #[serde(rename = "bought")]
   Bought,
+
+  #[serde(rename = "cancelled")]
   Cancelled,
+
+  #[serde(rename = "completed")]
   Completed,
+
+  #[serde(rename = "failed")]
   Failed,
+
+  #[serde(rename = "panic_sell_pending")]
   PanicSellPending,
+
+  #[serde(rename = "panic_sell_order_placed")]
   PanicSellOrderPlaced,
+
+  #[serde(rename = "panic_sold")]
   PanicSold,
+
+  #[serde(rename = "cancel_pending")]
   CancelPending,
+
+  #[serde(rename = "stop_loss_pending")]
   StopLossPending,
+
+  #[serde(rename = "stop_loss_finished")]
   StopLossFinished,
+
+  #[serde(rename = "stop_loss_order_placed")]
   StopLossOrderPlaced,
+
+  #[serde(rename = "switched")]
   Switched,
+
+  #[serde(rename = "switched_take_profit")]
   SwitchedTakeProfit,
+
+  #[serde(rename = "ttp_activated")]
   TtpActivated,
+
+  #[serde(rename = "ttp_order_placed")]
   TtpOrderPlaced,
+
+  #[serde(rename = "liquidated")]
   Liquidated,
+
+  #[serde(rename = "bought_safety_pending")]
   BoughtSafetyPending,
+
+  #[serde(rename = "bought_take_profit_pending")]
   BoughtTakeProfitPending,
+
+  #[serde(rename = "settled")]
   Settled,
-  Other(SmolStr),
-}
-
-impl Serialize for DealStatus {
-  fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
-  where
-    S: serde::Serializer,
-  {
-    let str = match self {
-      Self::Created => "created",
-      Self::BaseOrderPlaced => "base_order_placed",
-      Self::Bought => "bought",
-      Self::Cancelled => "cancelled",
-      Self::Completed => "completed",
-      Self::Failed => "failed",
-      Self::PanicSellPending => "panic_sell_pending",
-      Self::PanicSellOrderPlaced => "panic_sell_order_placed",
-      Self::PanicSold => "panic_sold",
-      Self::CancelPending => "cancel_pending",
-      Self::StopLossPending => "stop_loss_pending",
-      Self::StopLossFinished => "stop_loss_finished",
-      Self::StopLossOrderPlaced => "stop_loss_order_placed",
-      Self::Switched => "switched",
-      Self::SwitchedTakeProfit => "switched_take_profit",
-      Self::TtpActivated => "ttp_activated",
-      Self::TtpOrderPlaced => "ttp_order_placed",
-      Self::Liquidated => "liquidated",
-      Self::BoughtSafetyPending => "bought_safety_pending",
-      Self::BoughtTakeProfitPending => "bought_take_profit_pending",
-      Self::Settled => "settled",
-      Self::Other(v) => &*v,
-    };
-
-    str.serialize(serializer)
-  }
-}
-
-impl<'de> Deserialize<'de> for DealStatus {
-  fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
-  where
-    D: serde::Deserializer<'de>,
-  {
-    let status_str = <Cow<str> as Deserialize>::deserialize(deserializer)?;
-    Ok(match &*status_str {
-      "created" => Self::Created,
-      "base_order_placed" => Self::BaseOrderPlaced,
-      "bought" => Self::Bought,
-      "cancelled" => Self::Cancelled,
-      "completed" => Self::Completed,
-      "failed" => Self::Failed,
-      "panic_sell_pending" => Self::PanicSellPending,
-      "panic_sell_order_placed" => Self::PanicSellOrderPlaced,
-      "panic_sold" => Self::PanicSold,
-      "cancel_pending" => Self::CancelPending,
-      "stop_loss_pending" => Self::StopLossPending,
-      "stop_loss_finished" => Self::StopLossFinished,
-      "stop_loss_order_placed" => Self::StopLossOrderPlaced,
-      "switched" => Self::Switched,
-      "switched_take_profit" => Self::SwitchedTakeProfit,
-      "ttp_activated" => Self::TtpActivated,
-      "ttp_order_placed" => Self::TtpOrderPlaced,
-      "liquidated" => Self::Liquidated,
-      "bought_safety_pending" => Self::BoughtSafetyPending,
-      "bought_take_profit_pending" => Self::BoughtTakeProfitPending,
-      "settled" => Self::Settled,
-      v => Self::Other(SmolStr::from(v)),
-    })
-  }
 }

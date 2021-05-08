@@ -5,7 +5,7 @@ mod server_tracing;
 mod telegraf;
 
 use anyhow::Result;
-use cache::{Cache, CachedData};
+use cache::{Cache, Data};
 use clap::{ArgSettings, Clap};
 use metric::{BotGauge, BotLabels};
 use prometheus::{Encoder, Registry, TextEncoder, TEXT_FORMAT};
@@ -198,12 +198,12 @@ async fn get_metrics(req: Request<AppState>) -> tide::Result<Body> {
   Ok(body)
 }
 
-struct TelegrafWriter<'a>(&'a CachedData);
+struct TelegrafWriter<'a>(&'a Data);
 
 impl<'a> fmt::Display for TelegrafWriter<'a> {
   fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
     for bot in self.0.iter() {
-      telegraf::write_metrics_for_bot(&bot, self.0.date(), f)?;
+      telegraf::write_metrics_for_bot(&bot, f)?;
     }
 
     Ok(())

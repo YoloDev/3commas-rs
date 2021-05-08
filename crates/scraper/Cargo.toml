@@ -10,12 +10,12 @@ edition = "2018"
 anyhow = "1"
 async-std = { version = "1", features = ["attributes"] }
 async-trait = "0.1"
-clap = "3.0.0-beta.2"
 chrono = { version = "0.4", features = ["serde"] }
+clap = "3.0.0-beta.2"
 crossbeam = "0.8"
 futures = "0.3"
 hex = "0.4"
-indexmap = "1"
+im = "15"
 prometheus = "0.12"
 rust_decimal = "1"
 tide = { version = "0.16", default-features = false, features = ["h1-server"] }

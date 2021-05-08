@@ -1,25 +1,17 @@
+mod deals;
 mod errors;
 mod middleware;
 
-use std::time::Duration;
+pub use deals::{Deals, DealsScope};
 
 use middleware::RequestBuilderExt;
+use std::time::Duration;
 use surf::{http::Result, Client, Url};
-use three_commas_types::{Bot, BotStats, Deal};
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum DealsScope {
-  Active,
-  Finished,
-  Completed,
-  Cancelled,
-  Failed,
-  All,
-}
+use three_commas_types::{Bot, BotStats};
 
 #[derive(Clone)]
 pub struct ThreeCommasClient {
-  client: Client,
+  pub(crate) client: Client,
 }
 
 impl ThreeCommasClient {
@@ -29,8 +21,8 @@ impl ThreeCommasClient {
       .with(middleware::ApiKeyMiddleware::new(api_key.as_ref()))
       .with(middleware::SigningMiddleware::new(secret.as_ref()))
       .with(middleware::ErrorHandlerMiddleware)
-      .with(middleware::Limit::new(1, Duration::from_secs(1)))
-      .with(middleware::Limit::new(10, Duration::from_secs(60)))
+      .with(middleware::Limit::new(2, Duration::from_secs(1)))
+      .with(middleware::Limit::new(30, Duration::from_secs(60)))
       .with(middleware::TracingPipelineLoggerMiddlware);
     client.set_base_url(Url::parse("https://api.3commas.io/public/api/").unwrap());
 
@@ -54,17 +46,7 @@ impl ThreeCommasClient {
     self.client.recv_json(req).await
   }
 
-  pub async fn deals(&self, scope: DealsScope) -> Result<Vec<Deal>> {
-    let scope = match scope {
-      DealsScope::Active => "scope=active",
-      DealsScope::Finished => "scope=finished",
-      DealsScope::Completed => "scope=completed",
-      DealsScope::Cancelled => "scope=cancelled",
-      DealsScope::Failed => "scope=failed",
-      DealsScope::All => "",
-    };
-
-    let req = self.client.get(format!("ver1/deals?{}", scope)).signed();
-    self.client.recv_json(req).await
+  pub fn deals(&self) -> Deals {
+    Deals::new(self.clone())
   }
 }
