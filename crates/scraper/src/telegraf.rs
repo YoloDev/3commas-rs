@@ -257,6 +257,27 @@ pub fn write_metrics_for_bot(bot: &Cached<BotData>, f: &mut fmt::Formatter<'_>) 
   )?;
   write_metric("openDeals", &tags, "openDeals", &open_deals, cache_time, f)?;
   write_metric("enabled", &tags, "enabled", &is_enabled, cache_time, f)?;
+  let values: [&dyn MetricValue; 6] = [
+    &base_order_volume,
+    &safety_order_volume,
+    &max_safety_orders,
+    &max_active_deals,
+    &total_budget,
+    &profits_in_usd,
+  ];
+  let fields = Fields::new(
+    &[
+      "baseOrderVolume",
+      "safetyOrderVolume",
+      "maxSafetyOrders",
+      "maxActiveDeals",
+      "totalBudget",
+      "profitsInUsd",
+    ],
+    &values,
+  );
+  write_measurement("bot", &tags, &fields, Some(cache_time), f)?;
+  f.write_char('\n')?;
 
   for (base_currency, profits) in bot.profits() {
     let tags = [
