@@ -1,2 +1,6 @@
 [workspace]
 members = ["crates/types", "crates/client", "crates/scraper"]
+
+[profile.release]
+lto = "thin"
+debug = 1
