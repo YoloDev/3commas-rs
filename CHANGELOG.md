@@ -1,5 +1,16 @@
 # Changelog
 
+## [0.2.0](https://www.github.com/YoloDev/3commas-rs/compare/ghcr.io/yolodev/3commas-scraper-v0.1.28...ghcr.io/yolodev/3commas-scraper-v0.2.0) (2021-11-24)
+
+
+### ⚠ BREAKING CHANGES
+
+* make client constructor return result
+
+### Code Refactoring
+
+* make client constructor return result ([db85620](https://www.github.com/YoloDev/3commas-rs/commit/db85620972aecf0f2d5e0a775bda33185e83cf26))
+
 ### [0.1.28](https://www.github.com/YoloDev/3commas-rs/compare/ghcr.io/yolodev/3commas-scraper-v0.1.27...ghcr.io/yolodev/3commas-scraper-v0.1.28) (2021-11-24)
 
 
