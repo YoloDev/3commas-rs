@@ -22,21 +22,39 @@ jobs:
           token: ${{ secrets.GITHUB_TOKEN }}
           command: manifest
 
-      - name: Print outputs
+      - id: transform
+        name: Massage output
+        env:
+          PATHS_RELEASED: ${{ steps.release.outputs.paths_released }}
         run: |
-          echo "paths_released: '${{ steps.release.outputs.paths_released }}'"
-          echo "crate_released: '${{ toJSON(contains('crates', steps.release.outputs.paths_released)) }}'"
-          echo "any_released: '${{ toJSON(fromJSON(steps.release.outputs.paths_released).length > 0) }}'"
+          ANY=$(echo $PATHS_RELEASED | jq '. | length | . > 0')
+          CRATES=$(echo $PATHS_RELEASED | jq 'map(select(startswith("crates/"))) | length | . > 0')
+
+          echo "ANY: $ANY"
+          echo "CRATES: $CRATES"
+
+          echo "::set-output name=any::$ANY"
+          echo "::set-output name=crates::$CRATES"
+
+      - name: Print outputs
+        env:
+          ANY: ${{ steps.transform.outputs.any }}
+          CRATES: ${{ steps.transform.outputs.crates }}
+          PATHS: ${{ steps.release.outputs.paths_released }}
+        run: |
+          echo "paths_released: '$PATHS'"
+          echo "any: '$ANY'"
+          echo "crates: '$CRATES'"
 
     outputs:
       paths_released: ${{ steps.release.outputs.paths_released }}
-      crate_released: ${{ toJSON(contains('crates', steps.release.outputs.paths_released)) }}
-      any_released: ${{ toJSON(fromJSON(steps.release.outputs.paths_released).length > 0) }}
+      crate_released: ${{ steps.transform.outputs.crates }}
+      any_released: ${{ steps.transform.outputs.any }}
 
   release_crates:
     name: Release to crates.io
     runs-on: ubuntu-latest
-    if: fromJSON(needs.release_please.outputs.crate_released)
+    # if: fromJSON(needs.release_please.outputs.crate_released)
     needs: release_please
 
     concurrency:
