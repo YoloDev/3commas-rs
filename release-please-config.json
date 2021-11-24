@@ -24,7 +24,8 @@
     "crates/client": {},
     "crates/scraper": {},
     ".": {
-      "release-type": "simple"
+      "release-type": "simple",
+      "package-name": "ghcr.io/yolodev/3commas-scraper"
     }
   }
 }
