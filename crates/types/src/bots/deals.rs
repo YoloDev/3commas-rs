@@ -4,6 +4,7 @@ use rust_decimal::Decimal;
 use serde::{Deserialize, Serialize};
 use smol_str::SmolStr;
 
+#[allow(dead_code)]
 #[derive(Debug, Deserialize, Clone)]
 pub struct Deal {
   id: usize,

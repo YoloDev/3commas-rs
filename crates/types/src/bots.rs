@@ -8,6 +8,7 @@ use serde::Deserialize;
 pub use deals::{Deal, DealStatus};
 pub use stats::{BotStats, TokenValues};
 
+#[allow(dead_code)]
 #[derive(Debug, Deserialize, Clone)]
 pub struct Bot {
   name: String,

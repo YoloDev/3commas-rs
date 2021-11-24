@@ -158,7 +158,7 @@ async fn get_metrics(req: Request<AppState>) -> tide::Result<Body> {
 
   let data = state.cache.data();
   for bot in data.iter() {
-    let labels = BotLabels::new(&bot);
+    let labels = BotLabels::new(bot);
     gauges.enabled.set(&labels, bot.is_enabled());
     gauges.base_order.set(&labels, bot.base_order_volume());
     gauges.safety_order.set(&labels, bot.safety_order_volume());
@@ -203,7 +203,7 @@ struct TelegrafWriter<'a>(&'a Data);
 impl<'a> fmt::Display for TelegrafWriter<'a> {
   fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
     for bot in self.0.iter() {
-      telegraf::write_metrics_for_bot(&bot, f)?;
+      telegraf::write_metrics_for_bot(bot, f)?;
     }
 
     Ok(())

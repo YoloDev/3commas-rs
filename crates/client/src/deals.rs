@@ -202,13 +202,8 @@ impl Deals {
   }
 
   pub fn limit(mut self, limit: usize) -> Self {
-    if limit > 1000 {
-      panic!("limit cannot be greater than 1000");
-    }
-
-    if limit == 0 {
-      panic!("limit cannot be 0");
-    }
+    assert!(!(limit > 1000), "limit cannot be greater than 1000");
+    assert!(!(limit == 0), "limit cannot be 0");
 
     self.state = State::Init;
     self.inner.limit = limit;
