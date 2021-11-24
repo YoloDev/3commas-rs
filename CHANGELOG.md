@@ -1,5 +1,12 @@
 # Changelog
 
+### [0.2.1](https://www.github.com/YoloDev/3commas-rs/compare/ghcr.io/yolodev/3commas-scraper-v0.2.0...ghcr.io/yolodev/3commas-scraper-v0.2.1) (2021-11-24)
+
+
+### Features
+
+* publish arm64 image ([98ebf38](https://www.github.com/YoloDev/3commas-rs/commit/98ebf38c824ff2c190a2e0f4db845fa3170a18e9))
+
 ## [0.2.0](https://www.github.com/YoloDev/3commas-rs/compare/ghcr.io/yolodev/3commas-scraper-v0.1.28...ghcr.io/yolodev/3commas-scraper-v0.2.0) (2021-11-24)
 
 
