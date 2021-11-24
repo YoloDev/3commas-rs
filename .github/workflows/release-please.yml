@@ -20,21 +20,25 @@ jobs:
           token: ${{ secrets.GITHUB_TOKEN }}
           command: manifest
 
-      - run: |
-          echo "paths_released: ${{ steps.release.outputs.paths_released }}"
-          echo "release_created: ${{ steps.release.outputs.paths_released != '[]' }}"
+      - name: Print outputs
+        run: |
+          echo "paths_released: '${{ steps.release.outputs.paths_released }}'"
+          echo "crate_released: '${{ toJSON(contains('crates', steps.release.outputs.paths_released)) }}'"
+          echo "any_released: '${{ toJSON(fromJSON(steps.release.outputs.paths_released).length > 0) }}'"
 
     outputs:
-      release_created: ${{ steps.release.outputs.paths_released != '[]' }}
+      paths_released: ${{ steps.release.outputs.paths_released }}
+      crate_released: ${{ toJSON(contains('crates', steps.release.outputs.paths_released)) }}
+      any_released: ${{ toJSON(fromJSON(steps.release.outputs.paths_released).length > 0) }}
 
-  release:
+  release_crates:
     name: Release to crates.io
     runs-on: ubuntu-latest
-    if: needs.release_please.outputs.release_created == 'true'
+    if: fromJSON(needs.release_please.outputs.crate_released)
     needs: release_please
 
     concurrency:
-      group: release
+      group: release_crates
 
     steps:
       - name: Configure git
@@ -50,3 +54,41 @@ jobs:
         run: cargo install cargo-workspaces
       - name: Publish
         run: cargo workspaces publish --from-git --yes --token "${{ secrets.CRATES_IO_TOKEN }}"
+
+  release_image:
+    name: Release docker image
+    runs-on: ubuntu-latest
+    if: fromJSON(needs.release_please.outputs.any_released)
+    needs: release_please
+
+    concurrency:
+      group: release_image
+
+    steps:
+      - name: Configure git
+        run: |
+          git config --global core.autocrlf false
+          git config --global core.symlinks true
+          git config --global fetch.parallel 32
+
+      - uses: actions/checkout@v2
+      - name: read version.txt
+        run: |
+          VERSION=$(cat version.txt)
+          echo "VERSION=${VERSION}"
+          echo "VERSION=${VERSION}" >> $GITHUB_ENV
+      - uses: docker/setup-qemu-action@v1
+      - uses: docker/setup-buildx-action@v1
+      - name: Docker login
+        run: echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u ${{ github.actor }} --password-stdin
+      # - name: Available platforms
+      #   run: echo ${{ steps.buildx.outputs.platforms }}
+      - uses: docker/build-push-action@v2
+        with:
+          push: true
+          platforms: |
+            linux/amd64
+            linux/arm64
+          tags: |
+            ghcr.io/yolodev/3commas-scraper:latest
+            ghcr.io/yolodev/3commas-scraper:v${VERSION}
