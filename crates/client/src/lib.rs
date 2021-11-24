@@ -3,9 +3,11 @@ mod errors;
 mod middleware;
 
 pub use deals::{Deals, DealsScope};
+pub use errors::{ClientError, RequestError};
 pub use three_commas_types::{Bot, BotStats, Deal, Pair};
 
 use middleware::RequestBuilderExt;
+use std::result::Result as StdResult;
 use std::time::Duration;
 use surf::{http::Result, Client, Config, Url};
 
@@ -15,11 +17,11 @@ pub struct ThreeCommasClient {
 }
 
 impl ThreeCommasClient {
-  pub fn new(api_key: impl AsRef<str>, secret: impl AsRef<str>) -> Self {
+  pub fn new(api_key: impl AsRef<str>, secret: impl AsRef<str>) -> StdResult<Self, ClientError> {
     let client: Client = Config::new()
       .set_base_url(Url::parse("https://api.3commas.io/public/api/").unwrap())
       .try_into()
-      .unwrap();
+      .map_err(ClientError::FailedCreate)?;
 
     let client = client
       .with(middleware::TracingRequestLoggerMiddlware)
@@ -30,7 +32,7 @@ impl ThreeCommasClient {
       .with(middleware::Limit::new(30, Duration::from_secs(60)))
       .with(middleware::TracingPipelineLoggerMiddlware);
 
-    Self { client }
+    Ok(Self { client })
   }
 
   pub async fn bots(&self) -> Result<Vec<Bot>> {

@@ -119,7 +119,7 @@ async fn main() -> Result<()> {
   open_deals.register(&registry)?;
   enabled.register(&registry)?;
 
-  let client = ThreeCommasClient::new(api_key, api_secret);
+  let client = ThreeCommasClient::new(api_key, api_secret)?;
   let cache = Cache::new(&client).await?;
 
   let gauges = Arc::new(Gauges {
