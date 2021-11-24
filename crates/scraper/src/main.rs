@@ -6,7 +6,7 @@ mod telegraf;
 
 use anyhow::Result;
 use cache::{Cache, Data};
-use clap::{ArgSettings, Clap};
+use clap::{ArgEnum, ArgSettings, Parser};
 use metric::{BotGauge, BotLabels};
 use prometheus::{Encoder, Registry, TextEncoder, TEXT_FORMAT};
 use rust_decimal::Decimal;
@@ -18,13 +18,13 @@ use three_commas_client::ThreeCommasClient;
 use tide::{Body, Request, Response};
 use tracing_subscriber::EnvFilter;
 
-#[derive(Clap, Debug, PartialEq, Clone, Copy)]
+#[derive(ArgEnum, Debug, PartialEq, Clone, Copy)]
 enum LogFormat {
   Pretty,
   Json,
 }
 
-#[derive(Clap, Debug)]
+#[derive(Parser, Debug)]
 struct App {
   /// Log output format
   #[clap(
