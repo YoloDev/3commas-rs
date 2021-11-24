@@ -17,8 +17,7 @@ use std::{
   sync::Arc,
   time::Instant,
 };
-use three_commas_client::{DealsScope, ThreeCommasClient};
-use three_commas_types::{Bot, BotStats, Deal, Pair};
+use three_commas_client::{Bot, BotStats, Deal, DealsScope, Pair, ThreeCommasClient};
 use tracing::{event, span, Level};
 use tracing_futures::Instrument;
 

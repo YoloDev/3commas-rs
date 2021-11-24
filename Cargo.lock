@@ -2150,7 +2150,6 @@ dependencies = [
  "prometheus",
  "rust_decimal",
  "three-commas-client",
- "three-commas-types",
  "tide",
  "tracing",
  "tracing-futures",

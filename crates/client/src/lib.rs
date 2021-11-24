@@ -3,11 +3,11 @@ mod errors;
 mod middleware;
 
 pub use deals::{Deals, DealsScope};
+pub use three_commas_types::{Bot, BotStats, Deal, Pair};
 
 use middleware::RequestBuilderExt;
 use std::time::Duration;
 use surf::{http::Result, Client, Url};
-use three_commas_types::{Bot, BotStats};
 
 #[derive(Clone)]
 pub struct ThreeCommasClient {

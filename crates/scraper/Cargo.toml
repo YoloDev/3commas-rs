@@ -26,4 +26,3 @@ tracing-futures = "0.2.5"
 tracing-subscriber = "0.2.25"
 
 three-commas-client = { version = "0.0.0", path = "../client" }
-three-commas-types = { version = "0.0.0", path = "../types" }
