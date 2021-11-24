@@ -7,7 +7,7 @@ pub use three_commas_types::{Bot, BotStats, Deal, Pair};
 
 use middleware::RequestBuilderExt;
 use std::time::Duration;
-use surf::{http::Result, Client, Url};
+use surf::{http::Result, Client, Config, Url};
 
 #[derive(Clone)]
 pub struct ThreeCommasClient {
@@ -16,7 +16,12 @@ pub struct ThreeCommasClient {
 
 impl ThreeCommasClient {
   pub fn new(api_key: impl AsRef<str>, secret: impl AsRef<str>) -> Self {
-    let mut client = Client::new()
+    let client: Client = Config::new()
+      .set_base_url(Url::parse("https://api.3commas.io/public/api/").unwrap())
+      .try_into()
+      .unwrap();
+
+    let client = client
       .with(middleware::TracingRequestLoggerMiddlware)
       .with(middleware::ApiKeyMiddleware::new(api_key.as_ref()))
       .with(middleware::SigningMiddleware::new(secret.as_ref()))
@@ -24,7 +29,6 @@ impl ThreeCommasClient {
       .with(middleware::Limit::new(2, Duration::from_secs(1)))
       .with(middleware::Limit::new(30, Duration::from_secs(60)))
       .with(middleware::TracingPipelineLoggerMiddlware);
-    client.set_base_url(Url::parse("https://api.3commas.io/public/api/").unwrap());
 
     Self { client }
   }

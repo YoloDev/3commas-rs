@@ -54,7 +54,7 @@ jobs:
   release_crates:
     name: Release to crates.io
     runs-on: ubuntu-latest
-    # if: fromJSON(needs.release_please.outputs.crate_released)
+    if: fromJSON(needs.release_please.outputs.crate_released)
     needs: release_please
 
     concurrency:
