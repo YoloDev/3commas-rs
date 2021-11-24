@@ -8,21 +8,20 @@ use serde::Deserialize;
 pub use deals::{Deal, DealStatus};
 pub use stats::{BotStats, TokenValues};
 
-#[allow(dead_code)]
 #[derive(Debug, Deserialize, Clone)]
 pub struct Bot {
-  name: String,
-  id: usize,
-  account_id: usize,
-  is_enabled: bool,
-  max_safety_orders: usize,
-  max_active_deals: usize,
-  base_order_volume: Decimal,
-  safety_order_volume: Decimal,
-  safety_order_step_percentage: Decimal,
-  martingale_volume_coefficient: Decimal,
-  martingale_step_coefficient: Decimal,
-  pairs: Vec<Pair>,
+  pub name: String,
+  pub id: usize,
+  pub account_id: usize,
+  pub is_enabled: bool,
+  pub max_safety_orders: usize,
+  pub max_active_deals: usize,
+  pub base_order_volume: Decimal,
+  pub safety_order_volume: Decimal,
+  pub safety_order_step_percentage: Decimal,
+  pub martingale_volume_coefficient: Decimal,
+  pub martingale_step_coefficient: Decimal,
+  pub pairs: Vec<Pair>,
 }
 
 impl Bot {
