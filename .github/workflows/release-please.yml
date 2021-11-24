@@ -12,6 +12,8 @@ jobs:
     permissions:
       contents: write
       pull-requests: write
+      actions: write
+      statuses: write
 
     steps:
       - id: release
@@ -63,6 +65,9 @@ jobs:
 
     concurrency:
       group: release_image
+
+    permissions:
+      packages: write
 
     steps:
       - name: Configure git
