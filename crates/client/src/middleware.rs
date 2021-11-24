@@ -203,7 +203,7 @@ mod tests {
     )
     .build();
 
-    let signature = get_signature(&secret, &mut request).await.unwrap();
+    let signature = get_signature(secret, &mut request).await.unwrap();
     assert_eq!(
       signature,
       "505719450087661e95840d47b8bb2374ad2bb25abdcf0d99d7d410ab9b2f1d3a"

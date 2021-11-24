@@ -1,8 +1,11 @@
 [package]
 name = "three-commas-client"
 version = "0.1.0"
+edition = "2021"
+description = "3commas client"
+license = "MIT"
 authors = ["Aleksander Heintz <alxandr@alxandr.me>"]
-edition = "2018"
+repository = "https://github.com/YoloDev/3commas-rs"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
