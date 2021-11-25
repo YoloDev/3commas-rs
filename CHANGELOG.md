@@ -1,5 +1,12 @@
 # Changelog
 
+### [0.2.2](https://www.github.com/YoloDev/3commas-rs/compare/ghcr.io/yolodev/3commas-scraper-v0.2.1...ghcr.io/yolodev/3commas-scraper-v0.2.2) (2021-11-25)
+
+
+### Features
+
+* produce alpine images ([771bb7f](https://www.github.com/YoloDev/3commas-rs/commit/771bb7f7bc5834970e6290e45e20a9a348702df7))
+
 ### [0.2.1](https://www.github.com/YoloDev/3commas-rs/compare/ghcr.io/yolodev/3commas-scraper-v0.2.0...ghcr.io/yolodev/3commas-scraper-v0.2.1) (2021-11-24)
 
 
