@@ -1,5 +1,12 @@
 # Changelog
 
+### [0.2.3](https://www.github.com/YoloDev/3commas-rs/compare/ghcr.io/yolodev/three-commas-scraper-v0.2.2...ghcr.io/yolodev/three-commas-scraper-v0.2.3) (2021-11-26)
+
+
+### Features
+
+* add more platforms ([8e97ae2](https://www.github.com/YoloDev/3commas-rs/commit/8e97ae2d0dd2c5faeeb565af4753f2ba1c780aee))
+
 ### [0.2.2](https://www.github.com/YoloDev/3commas-rs/compare/ghcr.io/yolodev/3commas-scraper-v0.2.1...ghcr.io/yolodev/3commas-scraper-v0.2.2) (2021-11-25)
 
 
