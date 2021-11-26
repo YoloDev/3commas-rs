@@ -106,4 +106,4 @@ jobs:
       - run: earthly --version
       - name: Docker login
         run: echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u ${{ github.actor }} --password-stdin
-      - run: earthly --push --remote-cache=ghcr.io/yolodev/three-commas-scraper:build-cache --build-arg VERSION=${{ steps.version.outputs.version }} --image +image
+      - run: earthly --push --ci --build-arg VERSION=${{ steps.version.outputs.version }} +images
