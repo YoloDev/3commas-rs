@@ -1,0 +1,3 @@
+[submodule "build/rust-builder"]
+	path = build/rust-builder
+	url = https://github.com/YoloDev/rust-builder.git
