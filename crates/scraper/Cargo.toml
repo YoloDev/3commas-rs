@@ -10,7 +10,7 @@ repository = "https://github.com/YoloDev/3commas-rs"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-anyhow = "1.0.49"
+anyhow = "1.0.50"
 async-std = { version = "1.10.0", features = ["attributes"] }
 async-trait = "0.1.51"
 chrono = { version = "0.4.19", features = ["serde"] }
