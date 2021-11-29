@@ -1,5 +1,14 @@
 # Changelog
 
+### [0.2.1](https://www.github.com/YoloDev/3commas-rs/compare/three-commas-scraper-v0.2.0...three-commas-scraper-v0.2.1) (2021-11-29)
+
+
+### Dependencies
+
+* update rust crate anyhow to 1.0.49 ([#15](https://www.github.com/YoloDev/3commas-rs/issues/15)) ([46c698a](https://www.github.com/YoloDev/3commas-rs/commit/46c698a26f662b1f88b7e8c86d269d66d232a99d))
+* update rust crate anyhow to 1.0.50 ([#17](https://www.github.com/YoloDev/3commas-rs/issues/17)) ([3eb0d7d](https://www.github.com/YoloDev/3commas-rs/commit/3eb0d7da558aee98b44bcae3e1c56a8729497695))
+* update rust crate anyhow to 1.0.51 ([#18](https://www.github.com/YoloDev/3commas-rs/issues/18)) ([b44fc77](https://www.github.com/YoloDev/3commas-rs/commit/b44fc77e783ba3b308c2a092003f5dd439d55f43))
+
 ## [0.2.0](https://www.github.com/YoloDev/3commas-rs/compare/three-commas-scraper-v0.1.0...three-commas-scraper-v0.2.0) (2021-11-24)
 
 
