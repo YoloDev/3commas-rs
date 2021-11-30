@@ -1,5 +1,12 @@
 # Changelog
 
+### [0.2.5](https://www.github.com/YoloDev/3commas-rs/compare/ghcr.io/yolodev/three-commas-scraper-v0.2.4...ghcr.io/yolodev/three-commas-scraper-v0.2.5) (2021-11-30)
+
+
+### Dependencies
+
+* update rust crate tracing-subscriber to 0.3.3 ([#9](https://www.github.com/YoloDev/3commas-rs/issues/9)) ([8afe482](https://www.github.com/YoloDev/3commas-rs/commit/8afe48291a8bf9e7aca9a29c9f8ad6dc21f37d7c))
+
 ### [0.2.4](https://www.github.com/YoloDev/3commas-rs/compare/ghcr.io/yolodev/three-commas-scraper-v0.2.3...ghcr.io/yolodev/three-commas-scraper-v0.2.4) (2021-11-29)
 
 
