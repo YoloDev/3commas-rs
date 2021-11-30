@@ -68,6 +68,8 @@ jobs:
           git config --global fetch.parallel 32
 
       - uses: actions/checkout@v2
+        with:
+          submodules: "recursive"
       - uses: dtolnay/rust-toolchain@stable
       - uses: Swatinem/rust-cache@v1
       - name: Install cargo plugins
@@ -95,6 +97,8 @@ jobs:
           git config --global fetch.parallel 32
 
       - uses: actions/checkout@v2
+        with:
+          submodules: "recursive"
       - id: version
         name: read version.txt
         run: |
