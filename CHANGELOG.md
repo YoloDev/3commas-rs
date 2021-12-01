@@ -1,5 +1,12 @@
 # Changelog
 
+### [0.2.6](https://www.github.com/YoloDev/3commas-rs/compare/ghcr.io/yolodev/three-commas-scraper-v0.2.5...ghcr.io/yolodev/three-commas-scraper-v0.2.6) (2021-12-01)
+
+
+### Dependencies
+
+* update rust crate rust_decimal to 1.18.0 ([#20](https://www.github.com/YoloDev/3commas-rs/issues/20)) ([1397fd6](https://www.github.com/YoloDev/3commas-rs/commit/1397fd64ac6b94754cad079979d2aa8e8624c05d))
+
 ### [0.2.5](https://www.github.com/YoloDev/3commas-rs/compare/ghcr.io/yolodev/three-commas-scraper-v0.2.4...ghcr.io/yolodev/three-commas-scraper-v0.2.5) (2021-11-30)
 
 
