@@ -1,6 +1,6 @@
 [package]
 name = "three-commas-client"
-version = "0.2.0"
+version = "0.2.1"
 edition = "2021"
 description = "3commas client"
 license = "MIT"
@@ -23,7 +23,7 @@ thiserror = "1"
 tracing = "0.1"
 tracing-futures = "0.2"
 
-three-commas-types = { version = "0.1.0", path = "../types" }
+three-commas-types = { version = "0.1.1", path = "../types" }
 
 [dev-dependencies]
 async-std = { version = "1", features = ["attributes"] }

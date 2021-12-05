@@ -1,5 +1,19 @@
 # Changelog
 
+### [0.2.1](https://www.github.com/YoloDev/3commas-rs/compare/three-commas-client-v0.2.0...three-commas-client-v0.2.1) (2021-12-05)
+
+
+### Features
+
+* add new account endpoints ([dbdee49](https://www.github.com/YoloDev/3commas-rs/commit/dbdee49afc5ce57556aadc797ede357ae39810fd))
+
+
+### Dependencies
+
+* The following workspace dependencies were updated
+  * dependencies
+    * three-commas-types bumped from 0.1.0 to 0.1.1
+
 ## [0.2.0](https://www.github.com/YoloDev/3commas-rs/compare/three-commas-client-v0.1.0...three-commas-client-v0.2.0) (2021-11-24)
 
 
