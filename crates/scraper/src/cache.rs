@@ -2,12 +2,13 @@ mod cached;
 
 pub use cached::Cached;
 
-use anyhow::Result;
+use crate::error::IntoReport;
 use async_std::{
   sync::Mutex,
   task::{self, block_on},
 };
 use chrono::{Duration, Utc};
+use color_eyre::Result;
 use crossbeam::atomic::AtomicCell;
 use futures::{future, TryStreamExt};
 use im::OrdMap;
@@ -17,7 +18,7 @@ use std::{
   sync::Arc,
   time::Instant,
 };
-use three_commas_client::{Bot, BotStats, Deal, DealsScope, Pair, ThreeCommasClient};
+use three_commas_client::{AccountId, Bot, BotStats, Deal, DealsScope, Pair, ThreeCommasClient};
 use tracing::{event, span, Level};
 use tracing_futures::Instrument;
 
@@ -96,14 +97,55 @@ impl BotData {
   }
 }
 
+pub struct AccountData {
+  account_id: AccountId,
+  name: String,
+  btc_amount: Decimal,
+  usd_amount: Decimal,
+}
+
+impl AccountData {
+  pub fn id(&self) -> AccountId {
+    self.account_id
+  }
+
+  pub fn name(&self) -> &str {
+    &*self.name
+  }
+
+  pub fn btc_amount(&self) -> Decimal {
+    self.btc_amount
+  }
+
+  pub fn usd_amount(&self) -> Decimal {
+    self.usd_amount
+  }
+}
+
+impl From<three_commas_client::Account> for AccountData {
+  fn from(value: three_commas_client::Account) -> Self {
+    Self {
+      account_id: value.id,
+      name: value.name,
+      btc_amount: value.btc_amount,
+      usd_amount: value.usd_amount,
+    }
+  }
+}
+
 #[derive(Default)]
 pub struct Data {
   bots: OrdMap<usize, Cached<BotData>>,
+  accounts: OrdMap<AccountId, Cached<AccountData>>,
 }
 
 impl Data {
-  pub fn iter(&self) -> impl Iterator<Item = &Cached<BotData>> {
+  pub fn bots(&self) -> impl Iterator<Item = &Cached<BotData>> {
     self.bots.values()
+  }
+
+  pub fn accounts(&self) -> impl Iterator<Item = &Cached<AccountData>> {
+    self.accounts.values()
   }
 }
 
@@ -157,6 +199,7 @@ impl Cache {
   fn maybe_start_update(&self) {
     loop {
       let state = self.inner.state.load();
+
       match state {
         CacheState::Updating(v) => {
           let elapsed = Duration::from_std(v.elapsed()).unwrap();
@@ -174,6 +217,7 @@ impl Cache {
           }
           return;
         }
+
         CacheState::Stale(v, wait_time) => {
           let elapsed = Duration::from_std(v.elapsed()).unwrap();
           event!(target: "3commas::cache", Level::INFO, elapsed = ?elapsed.to_std().unwrap(), wait_time = ?wait_time.to_std().unwrap(), "cache stale elapsed");
@@ -246,7 +290,7 @@ async fn fetch_deals(client: &ThreeCommasClient) -> Result<Vec<Cached<Deal>>> {
     .try_take_while(|d| future::ready(Ok(d.created_at() > one_year_ago)))
     .try_collect()
     .await
-    .map_err(|e| e.into_inner())?;
+    .map_err(|e| e.into_inner().into_report())?;
 
   let seen_deals = all_deals.iter().map(|d| d.id()).collect::<HashSet<usize>>();
 
@@ -257,7 +301,7 @@ async fn fetch_deals(client: &ThreeCommasClient) -> Result<Vec<Cached<Deal>>> {
     .map_ok(Cached::new)
     .try_collect()
     .await
-    .map_err(|e| e.into_inner())?;
+    .map_err(|e| e.into_inner().into_report())?;
 
   let unseen_active_deals = active_deals
     .into_iter()
@@ -268,8 +312,27 @@ async fn fetch_deals(client: &ThreeCommasClient) -> Result<Vec<Cached<Deal>>> {
 }
 
 async fn fetch_data(client: &ThreeCommasClient, previous: Cached<Data>) -> Result<Cached<Data>> {
+  let accounts = client
+    .accounts()
+    .await
+    .map_err(|e| e.into_inner().into_report())?;
+
+  let summary_account = client
+    .account(AccountId::Summary)
+    .await
+    .map_err(|e| e.into_inner().into_report())?;
+
+  let mut accounts_builder = previous.accounts.clone();
+  accounts_builder.insert(AccountId::Summary, Cached::new(summary_account.into()));
+  for account in accounts {
+    accounts_builder.insert(account.id, Cached::new(account.into()));
+  }
+
   let bots = {
-    let bots = client.bots().await.map_err(|e| e.into_inner())?;
+    let bots = client
+      .bots()
+      .await
+      .map_err(|e| e.into_inner().into_report())?;
     let now = Utc::now();
     bots
       .into_iter()
@@ -287,7 +350,10 @@ async fn fetch_data(client: &ThreeCommasClient, previous: Cached<Data>) -> Resul
   let mut bot_builder = previous.bots.clone();
   for bot in bots {
     let stats = {
-      let stats = client.bot_stats(&bot).await.map_err(|e| e.into_inner())?;
+      let stats = client
+        .bot_stats(&bot)
+        .await
+        .map_err(|e| e.into_inner().into_report())?;
       Cached::new(stats)
     };
     let bot_deals = deals.remove(&bot.id()).unwrap_or_default();
@@ -322,5 +388,8 @@ async fn fetch_data(client: &ThreeCommasClient, previous: Cached<Data>) -> Resul
     count = deals.len(),
     "deals not connected to a known bot"
   );
-  Ok(Cached::new(Data { bots: bot_builder }))
+  Ok(Cached::new(Data {
+    bots: bot_builder,
+    accounts: accounts_builder,
+  }))
 }

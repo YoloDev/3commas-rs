@@ -7,7 +7,7 @@ use std::{
   slice::Iter,
 };
 
-use crate::cache::{BotData, Cached};
+use crate::cache::{AccountData, BotData, Cached};
 
 pub trait MetricValue {
   fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result;
@@ -96,6 +96,8 @@ impl<'a, const L: usize> FieldSet<'a> for Fields<'a, L> {
     names.zip(values)
   }
 }
+
+const ACCOUNT_TAG_NAMES: &[&str; 2] = &["accountId", "accountName"];
 
 const BOT_TAG_NAMES: &[&str; 4] = &["botId", "accountId", "quoteCurrency", "botName"];
 const BOT_TAG_NAMES_WITH_CURRENCY: &[&str; 5] = &[
@@ -186,6 +188,27 @@ fn write_metric<'a, T: TagSet<'a>>(
   write_measurement(metric, tags, &fields, Some(date), f)?;
   f.write_char('\n')?;
 
+  Ok(())
+}
+
+pub fn write_metrics_for_account(
+  account: &Cached<AccountData>,
+  f: &mut fmt::Formatter<'_>,
+) -> fmt::Result {
+  let cache_time = account.cache_time();
+  let account_id = account.id().to_string();
+  let name = account.name();
+  let btc_amount = account.btc_amount();
+  let usd_amount = account.usd_amount();
+
+  let tags = [&*account_id, name];
+  let tags = Tags::new(ACCOUNT_TAG_NAMES, &tags);
+
+  let values: [&dyn MetricValue; 2] = [&btc_amount, &usd_amount];
+  let fields = Fields::new(&["btcAmount", "usdAmount"], &values);
+
+  write_measurement("deal", &tags, &fields, Some(cache_time), f)?;
+  f.write_char('\n')?;
   Ok(())
 }
 

@@ -2,7 +2,7 @@ use crate::{
   cache::BotData,
   gauges::{AtomicBool, AtomicDecimal},
 };
-use anyhow::Result;
+use color_eyre::Result;
 use prometheus::{
   core::{Atomic, AtomicF64, AtomicU64, GenericGaugeVec},
   Opts, Registry,

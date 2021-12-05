@@ -1,12 +1,13 @@
 mod cache;
+mod error;
 mod gauges;
 mod metric;
 mod server_tracing;
 mod telegraf;
 
-use anyhow::Result;
 use cache::{Cache, Data};
 use clap::{ArgEnum, ArgSettings, Parser};
+use color_eyre::Result;
 use metric::{BotGauge, BotLabels};
 use prometheus::{Encoder, Registry, TextEncoder, TEXT_FORMAT};
 use rust_decimal::Decimal;
@@ -72,6 +73,7 @@ struct AppState {
 
 #[async_std::main]
 async fn main() -> Result<()> {
+  color_eyre::install()?;
   let app = App::parse();
 
   let filter = EnvFilter::from_default_env()
@@ -157,7 +159,7 @@ async fn get_metrics(req: Request<AppState>) -> tide::Result<Body> {
   let gauges = &*state.gauges;
 
   let data = state.cache.data();
-  for bot in data.iter() {
+  for bot in data.bots() {
     let labels = BotLabels::new(bot);
     gauges.enabled.set(&labels, bot.is_enabled());
     gauges.base_order.set(&labels, bot.base_order_volume());
@@ -202,7 +204,11 @@ struct TelegrafWriter<'a>(&'a Data);
 
 impl<'a> fmt::Display for TelegrafWriter<'a> {
   fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-    for bot in self.0.iter() {
+    for account in self.0.accounts() {
+      telegraf::write_metrics_for_account(account, f)?;
+    }
+
+    for bot in self.0.bots() {
       telegraf::write_metrics_for_bot(bot, f)?;
     }
 

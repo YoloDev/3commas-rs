@@ -15,6 +15,7 @@ async-std = { version = "1.10.0", features = ["attributes"] }
 async-trait = "0.1.51"
 chrono = { version = "0.4.19", features = ["serde"] }
 clap = "3.0.0-beta.5"
+color-eyre = "0.5"
 crossbeam = "0.8.1"
 futures = "0.3.18"
 hex = "0.4.3"
