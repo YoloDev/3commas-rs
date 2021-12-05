@@ -1,5 +1,19 @@
 # Changelog
 
+### [0.2.4](https://www.github.com/YoloDev/3commas-rs/compare/three-commas-scraper-v0.2.3...three-commas-scraper-v0.2.4) (2021-12-05)
+
+
+### Features
+
+* scrape account data ([043bc45](https://www.github.com/YoloDev/3commas-rs/commit/043bc45bf8d9be4babf52843b0b0de59a7638884))
+
+
+### Dependencies
+
+* The following workspace dependencies were updated
+  * dependencies
+    * three-commas-client bumped from 0.2.0 to 0.2.1
+
 ### [0.2.3](https://www.github.com/YoloDev/3commas-rs/compare/three-commas-scraper-v0.2.2...three-commas-scraper-v0.2.3) (2021-12-01)
 
 
