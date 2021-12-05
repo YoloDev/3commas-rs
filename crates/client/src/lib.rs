@@ -4,7 +4,9 @@ mod middleware;
 
 pub use deals::{Deals, DealsScope};
 pub use errors::{ClientError, RequestError};
-pub use three_commas_types::{Bot, BotStats, Deal, Pair};
+pub use three_commas_types::{
+  Account, AccountId, AutoBalanceMethod, Bot, BotStats, Deal, MarketType, Pair,
+};
 
 use middleware::RequestBuilderExt;
 use std::result::Result as StdResult;
@@ -33,6 +35,19 @@ impl ThreeCommasClient {
       .with(middleware::TracingPipelineLoggerMiddlware);
 
     Ok(Self { client })
+  }
+
+  pub async fn accounts(&self) -> Result<Vec<Account>> {
+    let req = self.client.get("ver1/accounts").signed();
+    self.client.recv_json(req).await
+  }
+
+  pub async fn account(&self, account_id: AccountId) -> Result<Account> {
+    let req = self
+      .client
+      .get(format!("ver1/accounts/{}", account_id))
+      .signed();
+    self.client.recv_json(req).await
   }
 
   pub async fn bots(&self) -> Result<Vec<Bot>> {
