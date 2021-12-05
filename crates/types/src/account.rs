@@ -1,7 +1,7 @@
 use chrono::{DateTime, Utc};
 use rust_decimal::Decimal;
 use serde::{de, Deserialize, Serialize};
-use std::fmt;
+use std::{cmp::Ordering, fmt};
 
 #[derive(Debug, Deserialize, Clone)]
 pub struct Account {
@@ -88,6 +88,24 @@ pub enum MarketType {
   Futures,
 }
 
+impl PartialOrd for AccountId {
+  #[inline]
+  fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
+    Some(self.cmp(other))
+  }
+}
+
+impl Ord for AccountId {
+  fn cmp(&self, other: &Self) -> Ordering {
+    match (self, other) {
+      (AccountId::Summary, AccountId::Summary) => Ordering::Equal,
+      (AccountId::Summary, _) => Ordering::Less,
+      (_, AccountId::Summary) => Ordering::Greater,
+      (AccountId::AccountId(l), AccountId::AccountId(r)) => Ord::cmp(l, r),
+    }
+  }
+}
+
 impl fmt::Display for AccountId {
   fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
     match self {
@@ -172,5 +190,17 @@ impl<'de> Deserialize<'de> for AccountId {
     D: serde::Deserializer<'de>,
   {
     deserializer.deserialize_any(AccountIdVisitor)
+  }
+}
+
+#[cfg(test)]
+mod tests {
+  use super::*;
+
+  #[test]
+  fn account_id_ord() {
+    assert!(AccountId::Summary < AccountId::AccountId(0));
+    assert!(AccountId::AccountId(0) > AccountId::Summary);
+    assert!(AccountId::AccountId(1) > AccountId::AccountId(0));
   }
 }
