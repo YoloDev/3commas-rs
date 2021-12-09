@@ -4,7 +4,7 @@ pub(crate) use request_limiter::Limit;
 
 use crate::errors::RequestError;
 use async_trait::async_trait;
-use hmac::{Hmac, Mac, NewMac};
+use hmac::{Hmac, Mac};
 use sha2::Sha256;
 use std::sync::atomic::{AtomicUsize, Ordering};
 use surf::{
