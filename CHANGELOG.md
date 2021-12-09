@@ -1,5 +1,14 @@
 # Changelog
 
+### [0.2.8](https://www.github.com/YoloDev/3commas-rs/compare/ghcr.io/yolodev/three-commas-scraper-v0.2.7...ghcr.io/yolodev/three-commas-scraper-v0.2.8) (2021-12-09)
+
+
+### Dependencies
+
+* update rust crate async-trait to 0.1.52 ([#27](https://www.github.com/YoloDev/3commas-rs/issues/27)) ([b332f81](https://www.github.com/YoloDev/3commas-rs/commit/b332f81bf7d9767c1de94e06758e646c466e5749))
+* update rust crate clap to 3.0.0-rc.1 ([#26](https://www.github.com/YoloDev/3commas-rs/issues/26)) ([52924fc](https://www.github.com/YoloDev/3commas-rs/commit/52924fc84a67748a792ca67027b05356b692c887))
+* update rust crate sha2 to 0.10 ([#25](https://www.github.com/YoloDev/3commas-rs/issues/25)) ([7093069](https://www.github.com/YoloDev/3commas-rs/commit/709306972ece48c59a9b39832e2c6f462b9c3091))
+
 ### [0.2.7](https://www.github.com/YoloDev/3commas-rs/compare/ghcr.io/yolodev/three-commas-scraper-v0.2.6...ghcr.io/yolodev/three-commas-scraper-v0.2.7) (2021-12-05)
 
 
