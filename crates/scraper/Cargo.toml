@@ -12,7 +12,7 @@ repository = "https://github.com/YoloDev/3commas-rs"
 [dependencies]
 anyhow = "1.0.51"
 async-std = { version = "1.10.0", features = ["attributes"] }
-async-trait = "0.1.51"
+async-trait = "0.1.52"
 chrono = { version = "0.4.19", features = ["serde"] }
 clap = "3.0.0-beta.5"
 color-eyre = "0.5"
