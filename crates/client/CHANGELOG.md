@@ -1,5 +1,12 @@
 # Changelog
 
+### [0.2.2](https://www.github.com/YoloDev/3commas-rs/compare/three-commas-client-v0.2.1...three-commas-client-v0.2.2) (2021-12-09)
+
+
+### Dependencies
+
+* update rust crate sha2 to 0.10 ([#25](https://www.github.com/YoloDev/3commas-rs/issues/25)) ([7093069](https://www.github.com/YoloDev/3commas-rs/commit/709306972ece48c59a9b39832e2c6f462b9c3091))
+
 ### [0.2.1](https://www.github.com/YoloDev/3commas-rs/compare/three-commas-client-v0.2.0...three-commas-client-v0.2.1) (2021-12-05)
 
 

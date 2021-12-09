@@ -2224,7 +2224,7 @@ dependencies = [
 
 [[package]]
 name = "three-commas-client"
-version = "0.2.1"
+version = "0.2.2"
 dependencies = [
  "async-std",
  "async-trait",
@@ -2243,7 +2243,7 @@ dependencies = [
 
 [[package]]
 name = "three-commas-scraper"
-version = "0.2.4"
+version = "0.2.5"
 dependencies = [
  "anyhow",
  "async-std",
