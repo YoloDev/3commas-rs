@@ -1,5 +1,21 @@
 # Changelog
 
+### [0.2.9](https://www.github.com/YoloDev/3commas-rs/compare/ghcr.io/yolodev/three-commas-scraper-v0.2.8...ghcr.io/yolodev/three-commas-scraper-v0.2.9) (2021-12-28)
+
+
+### Dependencies
+
+* update rust crate anyhow to 1.0.52 ([#35](https://www.github.com/YoloDev/3commas-rs/issues/35)) ([7e62834](https://www.github.com/YoloDev/3commas-rs/commit/7e6283480c72cf79f43a35cf1465b527d4751d89))
+* update rust crate clap to 3.0.0-rc.3 ([#29](https://www.github.com/YoloDev/3commas-rs/issues/29)) ([a7a0d56](https://www.github.com/YoloDev/3commas-rs/commit/a7a0d567bb9058c7da0333cc6ae0e4a217562516))
+* update rust crate clap to 3.0.0-rc.4 ([#31](https://www.github.com/YoloDev/3commas-rs/issues/31)) ([f52eb07](https://www.github.com/YoloDev/3commas-rs/commit/f52eb07d8ea0ac4e3fab74d7ee6b4f0b18a14115))
+* update rust crate clap to 3.0.0-rc.5 ([#32](https://www.github.com/YoloDev/3commas-rs/issues/32)) ([a164d2b](https://www.github.com/YoloDev/3commas-rs/commit/a164d2bbf77a2a3b9089472d68269fcb044722ee))
+* update rust crate clap to 3.0.0-rc.7 ([#33](https://www.github.com/YoloDev/3commas-rs/issues/33)) ([c945c41](https://www.github.com/YoloDev/3commas-rs/commit/c945c419e1ffc32c92fcf3c7c109fbf3542e90c2))
+* update rust crate clap to 3.0.0-rc.8 ([#36](https://www.github.com/YoloDev/3commas-rs/issues/36)) ([ac8c13f](https://www.github.com/YoloDev/3commas-rs/commit/ac8c13f9cd5512ae04be25031c5b2bff78a5f853))
+* update rust crate clap to 3.0.0-rc.9 ([#39](https://www.github.com/YoloDev/3commas-rs/issues/39)) ([cebd8d7](https://www.github.com/YoloDev/3commas-rs/commit/cebd8d7b726eb19ec2731a177c100749a0a9139a))
+* update rust crate futures to 0.3.19 ([#34](https://www.github.com/YoloDev/3commas-rs/issues/34)) ([6d3aabc](https://www.github.com/YoloDev/3commas-rs/commit/6d3aabc6b5056e2f0dd9afe77a0f622243f15db2))
+* update rust crate rust_decimal to 1.19.0 ([#38](https://www.github.com/YoloDev/3commas-rs/issues/38)) ([8f3e5d1](https://www.github.com/YoloDev/3commas-rs/commit/8f3e5d17a1f5792cc5abbfac426566213a9ff19c))
+* update rust crate tracing-subscriber to 0.3.4 ([#37](https://www.github.com/YoloDev/3commas-rs/issues/37)) ([9cdec28](https://www.github.com/YoloDev/3commas-rs/commit/9cdec28b902fa464328289be2382cbd7e775479f))
+
 ### [0.2.8](https://www.github.com/YoloDev/3commas-rs/compare/ghcr.io/yolodev/three-commas-scraper-v0.2.7...ghcr.io/yolodev/three-commas-scraper-v0.2.8) (2021-12-09)
 
 

@@ -1,6 +1,6 @@
 [package]
 name = "three-commas-scraper"
-version = "0.2.5"
+version = "0.2.6"
 edition = "2021"
 description = "3commas scraper"
 license = "MIT"
