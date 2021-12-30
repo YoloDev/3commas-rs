@@ -1,6 +1,6 @@
 [package]
 name = "three-commas-scraper"
-version = "0.2.5"
+version = "0.2.6"
 edition = "2021"
 description = "3commas scraper"
 license = "MIT"
@@ -29,4 +29,4 @@ tracing = "0.1.29"
 tracing-futures = "0.2.5"
 tracing-subscriber = { version = "0.3.5", features = ["json", "env-filter"] }
 
-three-commas-client = { version = "0.2.2", path = "../client" }
+three-commas-client = { version = "0.2.3", path = "../client" }
