@@ -1,5 +1,9 @@
 # Changelog
 
+* The following workspace dependencies were updated
+  * dependencies
+    * three-commas-types bumped from 0.1.1 to 0.1.2
+
 ### [0.2.2](https://www.github.com/YoloDev/3commas-rs/compare/three-commas-client-v0.2.1...three-commas-client-v0.2.2) (2021-12-09)
 
 
