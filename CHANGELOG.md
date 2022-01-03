@@ -1,5 +1,12 @@
 # Changelog
 
+### [0.2.10](https://github.com/YoloDev/3commas-rs/compare/ghcr.io/yolodev/three-commas-scraper-v0.2.9...ghcr.io/yolodev/three-commas-scraper-v0.2.10) (2022-01-03)
+
+
+### Dependencies
+
+* update rust crate clap to 3.0.0 ([#44](https://github.com/YoloDev/3commas-rs/issues/44)) ([f444f7c](https://github.com/YoloDev/3commas-rs/commit/f444f7c80489c8f9d419844250e444b52d1d3c95))
+
 ### [0.2.9](https://github.com/YoloDev/3commas-rs/compare/ghcr.io/yolodev/three-commas-scraper-v0.2.8...ghcr.io/yolodev/three-commas-scraper-v0.2.9) (2021-12-30)
 
 
