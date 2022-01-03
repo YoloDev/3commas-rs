@@ -448,9 +448,9 @@ dependencies = [
 
 [[package]]
 name = "clap"
-version = "3.0.0"
+version = "3.0.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "d17bf219fcd37199b9a29e00ba65dfb8cd5b2688b7297ec14ff829c40ac50ca9"
+checksum = "b1121e32687f7f90b905d4775273305baa4f32cd418923e9b0fa726533221857"
 dependencies = [
  "atty",
  "bitflags",
@@ -2230,7 +2230,7 @@ dependencies = [
 
 [[package]]
 name = "three-commas-client"
-version = "0.2.3"
+version = "0.2.4"
 dependencies = [
  "async-std",
  "async-trait",
@@ -2249,7 +2249,7 @@ dependencies = [
 
 [[package]]
 name = "three-commas-scraper"
-version = "0.2.6"
+version = "0.2.7"
 dependencies = [
  "anyhow",
  "async-std",
@@ -2272,7 +2272,7 @@ dependencies = [
 
 [[package]]
 name = "three-commas-types"
-version = "0.1.2"
+version = "0.1.3"
 dependencies = [
  "chrono",
  "rust_decimal",
