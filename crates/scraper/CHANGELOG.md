@@ -1,5 +1,15 @@
 # Changelog
 
+### [0.2.7](https://github.com/YoloDev/3commas-rs/compare/three-commas-scraper-v0.2.6...three-commas-scraper-v0.2.7) (2022-01-03)
+
+
+### Dependencies
+
+* update rust crate clap to 3.0.0 ([#44](https://github.com/YoloDev/3commas-rs/issues/44)) ([f444f7c](https://github.com/YoloDev/3commas-rs/commit/f444f7c80489c8f9d419844250e444b52d1d3c95))
+* The following workspace dependencies were updated
+  * dependencies
+    * three-commas-client bumped from 0.2.3 to 0.2.4
+
 ### [0.2.6](https://github.com/YoloDev/3commas-rs/compare/three-commas-scraper-v0.2.5...three-commas-scraper-v0.2.6) (2021-12-30)
 
 
