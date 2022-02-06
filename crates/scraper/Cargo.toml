@@ -17,7 +17,7 @@ chrono = { version = "0.4.19", features = ["serde"] }
 clap = { version = "3.0.14", features = ["derive", "env"] }
 color-eyre = "0.6"
 crossbeam = "0.8.1"
-futures = "0.3.19"
+futures = "0.3.21"
 hex = "0.4.3"
 im = "15.0.0"
 prometheus = "0.13.0"
