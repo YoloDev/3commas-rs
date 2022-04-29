@@ -19,7 +19,7 @@ color-eyre = "0.6"
 crossbeam = "0.8.1"
 futures = "0.3.21"
 hex = "0.4.3"
-im = "15.0.0"
+im = "15.1.0"
 prometheus = "0.13.0"
 rust_decimal = "1.23.1"
 tide = { version = "0.16.0", default-features = false, features = [
