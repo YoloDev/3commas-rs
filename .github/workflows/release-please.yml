@@ -105,7 +105,7 @@ jobs:
           VERSION=$(cat version.txt)
           echo "VERSION=${VERSION}"
           echo "::set-output name=version::${VERSION}"
-      - uses: docker/setup-qemu-action@v1
+      - uses: docker/setup-qemu-action@v2
       - uses: earthly/actions/setup-earthly@v1
       - run: earthly --version
       - name: Docker login
