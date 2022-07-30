@@ -25,7 +25,7 @@ rust_decimal = "1.25.0"
 tide = { version = "0.16.0", default-features = false, features = [
   "h1-server",
 ] }
-tracing = "0.1.35"
+tracing = "0.1.36"
 tracing-futures = "0.2.5"
 tracing-subscriber = { version = "0.3.15", features = ["json", "env-filter"] }
 
