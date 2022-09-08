@@ -20,7 +20,7 @@ crossbeam = "0.8.2"
 futures = "0.3.24"
 hex = "0.4.3"
 im = "15.1.0"
-prometheus = "0.13.1"
+prometheus = "0.13.2"
 rust_decimal = "1.26.1"
 tide = { version = "0.16.0", default-features = false, features = [
   "h1-server",
