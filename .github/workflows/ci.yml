@@ -34,7 +34,7 @@ jobs:
         with:
           submodules: "recursive"
       - uses: dtolnay/rust-toolchain@stable
-      - uses: Swatinem/rust-cache@v1
+      - uses: Swatinem/rust-cache@v2
 
       - name: Clippy
         run: cargo clippy -- -D warnings
