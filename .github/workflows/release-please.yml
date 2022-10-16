@@ -71,7 +71,7 @@ jobs:
         with:
           submodules: "recursive"
       - uses: dtolnay/rust-toolchain@stable
-      - uses: Swatinem/rust-cache@v1
+      - uses: Swatinem/rust-cache@v2
       - name: Install cargo plugins
         run: cargo install cargo-workspaces
       - name: Publish
