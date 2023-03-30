@@ -14,7 +14,7 @@ anyhow = "1.0.70"
 async-std = { version = "1.11.0", features = ["attributes"] }
 async-trait = "0.1.68"
 chrono = { version = "0.4.24", features = ["serde"] }
-clap = { version = "3.0.14", features = ["derive", "env"] }
+clap = { version = "4.2.1", features = ["derive", "env"] }
 color-eyre = "0.6"
 crossbeam = "0.8.2"
 futures = "0.3.28"
